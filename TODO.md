@@ -1,0 +1,12 @@
+- [ ] Rate limiting
+- [ ] Cron
+- [ ] Data verification
+- [ ] Min price max price set price validation
+- [ ] Timestamp
+- [ ] Show count of returned result
+- [ ] Have cron log updates
+- [ ] Node env production
+- [ ] Log errors somewhere
+- [ ] Helmet?
+- [ ] Clone database to cloud provider
+- [ ] Mount sqlite

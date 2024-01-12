@@ -1,0 +1,9 @@
+version: "3.9"
+services:
+  bazaar:
+    build:
+      context: .
+    ports:
+      - '3000:3000'
+    volumes:
+      - ./trades.db:/app/trades.db

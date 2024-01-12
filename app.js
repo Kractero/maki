@@ -5,6 +5,8 @@ import { parse } from "./parse.js";
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
+const port = process.env.port || 3000;
+
 const db = new Database('trades.db');
 
 const app = express()
@@ -113,4 +115,4 @@ app.get('/api/trades', (req, res) => {
   return res.json(stmt)
 })
 
-app.listen(3000)
+app.listen(port)
