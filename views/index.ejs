@@ -1,12 +1,138 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Document</title>
   <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="/output.css" rel="stylesheet">
 </head>
-<body>
-  <p>oc</p>
+
+<body class="font-main">
+  <header class="flex items-center justify-center flex-col pt-40 mb-10">
+    <h2 class="font-bold text-5xl">Bazaar</h2>
+  </header>
+  <main>
+    <div class="flex flex-col items-center justify-center">
+      <form onsubmit="funky(event, this)" hx-get="/trades" hx-swap="innerHTML" hx-target="#trades" hx-indicator="#loading" class="flex flex-col gap-4 w-80">
+        <div class="flex gap-2 justify-between">
+          <label>Buyer</label>
+          <input type="text" id="buyer" name="buyer" class="border-black border rounded-md p-1 max-w-24" value="<%= qs.buyer || "" %>">
+        </div>
+        <div class="flex gap-2 justify-between">
+          <label>Seller</label>
+          <input type="text" id="seller" name="seller" class="border-black border rounded-md p-1 max-w-24" value="<%= qs.seller || "" %>">
+        </div>
+        <div class="flex gap-2 justify-between">
+          <label>Price</label>
+          <div>
+            <input type="number" min="0" step="0.01" id="minprice" name="minprice" class="border-black border rounded-md p-1 max-w-16">
+            <input type="number" min="0" step="0.01" id="price" name="price" class="border-black border rounded-md p-1 max-w-16">
+            <input type="number" min="0" step="0.01" id="maxprice" name="maxprice" class="border-black border rounded-md p-1 max-w-16">
+          </div>
+        </div>
+        <div class="flex gap-2 justify-between">
+          <label>Timestamp</label>
+          <div>
+            <input type="number" min="1" class="border-black border rounded-md p-1 max-w-16">
+            <input type="number" min="1" class="border-black border rounded-md p-1 max-w-16">
+            <input type="number" min="1" class="border-black border rounded-md p-1 max-w-16">
+          </div>
+        </div>
+        <div class="flex gap-2 justify-between">
+          <label>Season</label>
+          <input type="number" min="1" id="season" name="season" class="border-black border rounded-md p-1 max-w-24">
+        </div>
+        <div class="flex gap-2 justify-between">
+          <label>Category</label>
+          <select id="category" name="category" class="border-black border rounded-md p-1 max-w-24">
+            <option>Common</option>
+            <option>Uncommon</option>
+            <option>Rare</option>
+            <option>Ultra Rare</option>
+            <option>Epic</option>
+            <option>Legendary</option>
+          </select>
+        </div>
+        <button type="submit" class="p-2 bg-blue-400 rounded-md">Five Hours</button>
+      </form>
+      <div class="mt-5">
+        <span class="htmx-indicator" id="loading">
+          <img src="img/loader.gif" alt="Loading..." class="m-auto h-10" />
+        </span>
+        <table class="table-fixed w-[768px]">
+          <thead>
+            <tr>
+              <th class="border border-slate-600 p-2 w-12">Card</th>
+              <th class="border border-slate-600 p-2 w-12">Seller</th>
+              <th class="border border-slate-600 p-2 w-12">Buyer</th>
+              <th class="border border-slate-600 p-2 w-2">Price</th>
+              <th class="border border-slate-600 p-2 w-12">Timestamp</th>
+            </tr>
+          </thead>
+          <tbody id="trades">
+              <% data.forEach((entry, index) => { %>
+              <tr <%= (index === data.length - 1 && data.length === 50) ? `hx-get=${qlery} hx-trigger=revealed hx-swap=afterend` : '' %>>
+                <td class="border border-slate-600 p-2 break-words
+                  <% if (entry.category === "c") { %> text-gray-500 <% } %>
+                  <% if (entry.category === "u") { %> text-green-500 <% } %>
+                  <% if (entry.category === "r") { %> text-blue-500 <% } %>
+                  <% if (entry.category === "ur") { %> text-purple-500 <% } %>
+                  <% if (entry.category === "e") { %> text-yellow-600 <% } %>
+                  <% if (entry.category === "l") { %> text-yellow-400 <% } %>
+                  "
+                  >
+                  <a target="_blank" rel="noreferrer noopener"
+                   class="hover:underline"
+                   href="https://nationstates.net/page=deck/card=<%= entry.card_id %>/season=<%= entry.season %>">
+                    S<%= entry.season %> <%= entry.card_name %>
+                  </a>
+                </td>
+                <td class="border border-slate-600 p-2 break-words">
+                  <a target="_blank" rel="noreferrer noopener"
+                  class="hover:underline"
+                  href="https://nationstates.net/nation=<%= entry.seller %>">
+                  <%= entry.seller %>
+                 </a>
+                </td>
+                <td class="border border-slate-600 p-2 break-words">
+                  <a target="_blank" rel="noreferrer noopener"
+                  class="hover:underline"
+                  href="https://nationstates.net/nation=<%= entry.buyer %>">
+                  <%= entry.buyer %></td>
+                 </a>
+                <td class="border border-slate-600 p-2 break-words"><%= entry.price %></td>
+                <td class="border border-slate-600 p-2 break-words"><%= entry.timestamp %></td>
+              </tr>
+              <% }); %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+  <i data-lucide="sun"></i>
+  <i data-lucide="moon"></i>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    lucide.createIcons();
+    function funky(event, form) {
+      event.preventDefault();
+      const formData = new FormData(form);
+      const queryString = Array.from(formData.entries())
+        .map(([key, value]) => {
+          if (value) {
+            return `${encodeURIComponent(key)}=${encodeURIComponent(value)}`
+          }
+        })
+        .filter (kv => kv)
+        .join('&');
+        const url = new URL(location);
+        const newLoc = `${url.origin}?${queryString}`
+      history.pushState("", "", newLoc)
+    }
+  </script>
 </body>
+
 </html>
