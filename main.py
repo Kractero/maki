@@ -4,6 +4,27 @@ import xml.etree.ElementTree as ET
 from time import sleep
 import sqlite3
 import datetime
+import json
+
+# def mapCardName():
+#     # con = sqlite3.connect("updated_trades.db")
+#     con = sqlite3.connect("trades - Copy.db")
+
+#     cur = con.cursor()
+
+#     cur.execute("ATTACH DATABASE 'cardids.db' AS cardsdb")
+
+#     cur.execute("""
+#         UPDATE trades
+#         SET name = (
+#             SELECT name
+#             FROM cardsdb.cards
+#             WHERE cardsdb.cards.id = trades.card_id
+#         )
+#         WHERE card_name IS NULL;  -- Update only rows where 'card_name' is not already set
+#     """)
+#     con.commit()
+#     con.close()
 
 def getLatestTradesRecursivelyWithoutUpdate():
     # con = sqlite3.connect("updated_trades.db")
@@ -11,24 +32,31 @@ def getLatestTradesRecursivelyWithoutUpdate():
 
     cur = con.cursor()
 
-    create_table_sql = '''
-    CREATE TABLE IF NOT EXISTS trades (
-        buyer TEXT,
-        card_id INTEGER,
-        category TEXT,
-        price REAL,
-        season INTEGER,
-        seller TEXT,
-        timestamp INTEGER,
-        UNIQUE(buyer, card_id, category, price, season, seller, timestamp)
-    )
-    '''
+    cards_con = sqlite3.connect("cardids.db")
 
-    cur.execute(create_table_sql)
+    cur = con.cursor()
+    cards_cur = cards_con.cursor()
+
+    # create_table_sql = '''
+    # CREATE TABLE IF NOT EXISTS trades (
+    #     buyer TEXT,
+    #     card_id INTEGER,
+    #     category TEXT,
+    #     price REAL,
+    #     season INTEGER,
+    #     seller TEXT,
+    #     timestamp INTEGER,
+    #     card_name TEXT,
+    #     UNIQUE(buyer, card_id, category, price, season, seller, timestamp, card_name)
+    # )
+    # '''
+
+    # cur.execute(create_table_sql)
 
     sincetime = 1522549491
     for row in cur.execute("SELECT * FROM trades ORDER BY timestamp DESC LIMIT 1"):
         sincetime = row[6]
+        print (row)
 
     def getLatestThousandTrades(timestamp=datetime.datetime.now().timestamp()):
         sleep(0.7)
@@ -52,18 +80,33 @@ def getLatestTradesRecursivelyWithoutUpdate():
             buyer = trade_elem.find('BUYER').text
             card_id = trade_elem.find('CARDID').text
             category = trade_elem.find('CATEGORY').text
+            if category == "ultra-rare":
+                category = 'ur'
+            else:
+                category = category[0]
             price = trade_elem.find('PRICE').text if trade_elem.find('PRICE') is not None else 0.0
             season = trade_elem.find('SEASON').text
             seller = trade_elem.find('SELLER').text
             timestamp = trade_elem.find('TIMESTAMP').text
 
+            cards_cur.execute("""
+                SELECT name
+                FROM cards
+                WHERE id = ?
+            """, (card_id,))
+
+            name = cards_cur.fetchone()
+
+            if name:
+                name = name[0]
+
             if price is None:
                 price = 0.0
 
-            entry = tuple([buyer, int(card_id), category[0], float(price), int(season), seller, int(timestamp)])
+            entry = tuple([buyer, int(card_id), category, float(price), int(season), seller, int(timestamp), name])
             data.append(entry)
 
-        cur.executemany("INSERT OR IGNORE INTO trades VALUES (?, ?, ?, ?, ?, ?, ?)", data)
+        cur.executemany("INSERT OR IGNORE INTO trades VALUES (?, ?, ?, ?, ?, ?, ?, ?)", data)
 
         getLatestThousandTrades(timestamp)
 
@@ -77,8 +120,10 @@ def getLatestTradesRecursivelyWithoutUpdate():
 
 # def build_from_9003():
 #     con = sqlite3.connect("trades.db")
+#     cards_con = sqlite3.connect("cardids.db")
 
 #     cur = con.cursor()
+#     cards_cur = cards_con.cursor()
 
 #     create_table_sql = '''
 #     CREATE TABLE IF NOT EXISTS trades (
@@ -89,7 +134,8 @@ def getLatestTradesRecursivelyWithoutUpdate():
 #         season INTEGER,
 #         seller TEXT,
 #         timestamp INTEGER,
-#         UNIQUE(buyer, card_id, category, price, season, seller, timestamp)
+#         card_name TEXT,
+#         UNIQUE(buyer, card_id, seller, timestamp)
 #     )
 #     '''
 
@@ -107,6 +153,17 @@ def getLatestTradesRecursivelyWithoutUpdate():
 #         timestamp = arr.pop(0)
 #         arr.append(int(timestamp))
 
+#         cards_cur.execute("""
+#             SELECT name
+#             FROM cards
+#             WHERE id = ?
+#         """, (arr[1],))
+
+#         name = cards_cur.fetchone()
+
+#         if name:
+#             name = name[0]
+
 #         if arr[3] == 'None':
 #             arr[3] = 0.0
 #         else:
@@ -114,12 +171,18 @@ def getLatestTradesRecursivelyWithoutUpdate():
 
 #         arr[4] = int(arr[4])
 #         arr[1] = int(arr[1])
-#         arr[2] = arr[2][0]
+#         if arr[2] == 'ultra-rare':
+#             arr[2] = 'ur'
+#         else:
+#             arr[2] = arr[2][0]
 
+#         arr.append(name)
 #         data.append(tuple(arr))
 
-#     cur.executemany("INSERT OR IGNORE INTO trades VALUES (?, ?, ?, ?, ?, ?, ?)", data)
+#     cur.executemany("INSERT OR IGNORE INTO trades VALUES (?, ?, ?, ?, ?, ?, ?, ?)", data)
+
 #     con.commit()
+#     con.close()
 
 # def combine():
 #     con3 = sqlite3.connect("trades.db")
@@ -136,3 +199,4 @@ def getLatestTradesRecursivelyWithoutUpdate():
 # build_from_9003()
 getLatestTradesRecursivelyWithoutUpdate()
 # combine()
+# mapCardName()
