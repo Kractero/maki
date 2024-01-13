@@ -4,3 +4,4 @@ __pycache__
 pre-combine
 node_modules
 .env
+output.css

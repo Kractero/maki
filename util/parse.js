@@ -24,12 +24,12 @@ export function parse(params, limit, page) {
         sqlConditions.push(`price <= (?)`);
       } else if (param === "beforetime") {
         const dateObject = new Date(params.beforetime);
-        params.beforetime = Math.floor(dateObject.getTime()/1000).toString();
-        sqlConditions.push(`timestamp < (?)`);
+        paramValue = Math.floor(dateObject.getTime()/1000).toString();
+        sqlConditions.push(`timestamp > (?)`);
       } else if (param === "sincetime") {
         const dateObject = new Date(params.sincetime);
-        params.sincetime = Math.floor(dateObject.getTime()/1000).toString();
-        sqlConditions.push(`timestamp > (?)`);
+        paramValue = Math.floor(dateObject.getTime()/1000).toString();
+        sqlConditions.push(`timestamp < (?)`);
       } else {
         sqlConditions.push(`${param === "cardid" ? "card_id" : param} COLLATE NOCASE = (?)`);
       }

@@ -55,7 +55,6 @@ def getLatestTradesRecursivelyWithoutUpdate():
     sincetime = 1522549491
     for row in cur.execute("SELECT * FROM trades ORDER BY timestamp DESC LIMIT 1"):
         sincetime = row[6]
-        print (row)
 
     def getLatestThousandTrades(timestamp=datetime.datetime.now().timestamp()):
         sleep(0.7)
@@ -195,7 +194,7 @@ def build_from_9003():
 #     con3.commit()
 #     con3.execute("detach database dba")
 
-# build_from_9003()
+build_from_9003()
 getLatestTradesRecursivelyWithoutUpdate()
 # combine()
 # mapCardName()

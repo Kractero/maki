@@ -55,7 +55,7 @@ app.get('/trades', (req, res) => {
     res.send(`
       ${data.map((entry, index) =>`
       <tr ${index === data.length - 1 ? `hx-get=/trades?${querystring}&page=${page} hx-trigger=revealed hx-swap=afterend` : ''}>
-        <td class="border border-slate-600 p-2 break-words
+        <td class="border border-slate-600 p-2 break-words text-xs sm:text-base
           ${entry.category === "c" ? 'text-gray-500' :
             entry.category === "u" ? 'text-green-500' :
             entry.category === "r" ? 'text-blue-500' :
@@ -68,20 +68,20 @@ app.get('/trades', (req, res) => {
             S${entry.season} ${entry.card_name}
           </a>
         </td>
-        <td class="border border-slate-600 p-2 break-words">
+        <td class="border border-slate-600 p-2 break-words text-xs sm:text-base">
           <a target="_blank" rel="noreferrer noopener" class="hover:underline"
             href="https://nationstates.net/nation=${entry.seller}">
             ${entry.seller}
           </a>
         </td>
-        <td class="border border-slate-600 p-2 break-words">
+        <td class="border border-slate-600 p-2 break-words text-xs sm:text-base">
           <a target="_blank" rel="noreferrer noopener" class="hover:underline"
             href="https://nationstates.net/nation=${entry.buyer}">
             ${entry.buyer}
           </a>
         </td>
-        <td class="border border-slate-600 p-2 break-words">${entry.price}</td>
-        <td class="border border-slate-600 p-2 break-words">${entry.timestamp}</td>
+        <td class="border border-slate-600 p-2 break-words text-xs sm:text-base">${entry.price}</td>
+        <td class="border border-slate-600 p-2 break-words text-[0.5rem] sm:text-base">${entry.timestamp}</td>
       </tr>
       `).join('')}
     `)
