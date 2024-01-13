@@ -1,9 +1,11 @@
 import Database from "better-sqlite3"
 import express from "express"
 import { join } from "path"
-import { parse } from "./parse.js";
+import { parse } from "./util/parse.js";
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { convertTime } from "./util/convertTime.js";
+import { buildQS } from "./util/buildQS.js";
 
 const port = process.env.port || 3000;
 
@@ -18,60 +20,37 @@ const __dirname = dirname(__filename);
 app.use(express.static(join(__dirname + "/public")));
 
 app.get('/', (req, res) => {
-  const sqlQuery = parse(req.query, 50, 1)
-  const data = db.prepare(sqlQuery[0]).all(...sqlQuery[1]).map(entry => {
-    const currentTime = Math.floor(Date.now() / 1000);
-    const timeDifference = currentTime - entry.timestamp;
-
-    if (timeDifference < 60) {
-      entry.timestamp = `${timeDifference} second${timeDifference !== 1 ? 's' : ''} ago`;
-    } else if (timeDifference < 3600) {
-      const minutes = Math.floor(timeDifference / 60);
-      const secondsRemainder = timeDifference % 60;
-      entry.timestamp = `${minutes} minute${minutes !== 1 ? 's' : ''} ${secondsRemainder} second${secondsRemainder !== 1 ? 's' : ''} ago`;
-    } else if (timeDifference < 86400) {
-      const hours = Math.floor(timeDifference / 3600);
-      const minutesRemainder = Math.floor((timeDifference % 3600) / 60);
-      entry.timestamp = `${hours} hour${hours !== 1 ? 's' : ''} ${minutesRemainder} minute${minutesRemainder !== 1 ? 's' : ''} ago`;
-    } else if (timeDifference < 2592000) {
-      const days = Math.floor(timeDifference / 86400);
-      const hoursRemainder = Math.floor((timeDifference % 86400) / 3600);
-      entry.timestamp = `${days} day${days !== 1 ? 's' : ''} ${hoursRemainder} hour${hoursRemainder !== 1 ? 's' : ''} ago`;
-    } else if (timeDifference < 31536000) {
-      const months = Math.floor(timeDifference / 2592000);
-      const daysRemainder = Math.floor((timeDifference % 2592000) / 86400);
-      entry.timestamp = `${months} month${months !== 1 ? 's' : ''} ${daysRemainder} day${daysRemainder !== 1 ? 's' : ''} ago`;
-    } else {
-      const years = Math.floor(timeDifference / 31536000);
-      const monthsRemainder = Math.floor((timeDifference % 31536000) / 2592000);
-      entry.timestamp = `${years} year${years !== 1 ? 's' : ''} ${monthsRemainder} month${monthsRemainder !== 1 ? 's' : ''} ago`;
-    }
-
-    return entry;
-  })
-
-  const querystring = Object.keys(req.query).map(key => {
-    if (req.query[key] && key !== "page") {
-      return `${encodeURIComponent(key)}=${encodeURIComponent(req.query[key])}`
-    }
-  }).filter(param => param).join('&')
+  const queryParameters = req.query;
+  if (queryParameters.hasOwnProperty('category') && queryParameters['category'].toLowerCase() === 'all') {
+      delete queryParameters['category'];
+  }
+  const sqlQuery = parse(queryParameters, 50, 1)
+  const data = convertTime(db.prepare(sqlQuery[0]).all(...sqlQuery[1]))
+  const tot = Object.keys(queryParameters).length > 0 ? db.prepare(sqlQuery[2]).all(...sqlQuery[1]).length : db.prepare("SELECT COUNT(*) as total FROM trades").get().total
+  const querystring = buildQS(queryParameters)
 
   const nextPageUrl = `/trades?page=2&${querystring}`;
-  res.render("index", { data: data, qs: req.query, qlery: nextPageUrl })
+  res.render("index", { data: data, qs: req.query, qlery: nextPageUrl, total: tot })
+})
+
+app.get('/tradestotal', (req, res) => {
+  const queryParameters = req.query;
+  if (queryParameters.hasOwnProperty('category') && queryParameters['category'].toLowerCase() === 'all') {
+      delete queryParameters['category'];
+  }
+  const page = queryParameters.page ? parseInt(queryParameters.page) + 1 : 1;
+  const sqlQuery = parse(queryParameters, 50, page)
+  const test = Object.keys(queryParameters).length > 0 && queryParameters.category !== "All" ? db.prepare(sqlQuery[2]).all(...sqlQuery[1]).length : db.prepare("SELECT COUNT(*) as total FROM trades").get().total
+  res.send({count: test})
 })
 
 app.get('/trades', (req, res) => {
   const page = req.query.page ? parseInt(req.query.page) + 1 : 1;
   const sqlQuery = parse(req.query, 50, page)
-  console.log(sqlQuery)
-  const data = db.prepare(sqlQuery[0]).all(...sqlQuery[1])
-  const querystring = Object.keys(req.query).map(key => {
-    if (req.query[key] && key !== "page") {
-      return `${encodeURIComponent(key)}=${encodeURIComponent(req.query[key])}`
-    }
-  }).filter(param => param).join('&')
+  const data = convertTime(db.prepare(sqlQuery[0]).all(...sqlQuery[1]))
+  const querystring = buildQS(req.query)
   if (data.length === 0) {
-    res.render("trade", { data: `<p class="text-red-200">No trades found with the requested parameters.</p>` })
+    res.send(``)
   } else {
     res.send(`
       ${data.map((entry, index) =>`
