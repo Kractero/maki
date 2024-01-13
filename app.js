@@ -6,6 +6,12 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { convertTime } from "./util/convertTime.js";
 import { buildQS } from "./util/buildQS.js";
+import { rateLimit } from 'express-rate-limit'
+import compression from "compression";
+import helmet from "helmet";
+import cors from "cors";
+import { getOrSetToCache } from "./util/getOrSetToCache.js";
+import { logger } from "./util/logger.js";
 
 const port = process.env.port || 3000;
 
@@ -14,84 +20,136 @@ const db = new Database('trades.db');
 const app = express()
 app.set("view engine", "ejs")
 
+const limiter = rateLimit({
+  windowMs: 30 * 1000,
+  max: 50,
+  message: { error: 'Rate limit exceeded', status: 429 },
+});
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+app.use(compression());
+app.use(  helmet.contentSecurityPolicy({
+  directives: {
+    defaultSrc: ["'self'"],
+    scriptSrc: [
+      "'self'",
+      'https://unpkg.com', // Allow scripts from unpkg.com
+      "'unsafe-inline'",   // Allowing inline scripts (consider removing this in production)
+    ],
+  },
+}));
+app.use(cors());
 app.use(express.static(join(__dirname + "/public")));
 
-app.get('/', (req, res) => {
-  const queryParameters = req.query;
-  if (queryParameters.hasOwnProperty('category') && queryParameters['category'].toLowerCase() === 'all') {
-      delete queryParameters['category'];
-  }
-  const sqlQuery = parse(queryParameters, 50, 1)
-  const data = convertTime(db.prepare(sqlQuery[0]).all(...sqlQuery[1]))
-  const tot = Object.keys(queryParameters).length > 0 ? db.prepare(sqlQuery[2]).all(...sqlQuery[1]).length : db.prepare("SELECT COUNT(*) as total FROM trades").get().total
-  const querystring = buildQS(queryParameters)
-
-  const nextPageUrl = `/trades?page=2&${querystring}`;
-  res.render("index", { data: data, qs: req.query, qlery: nextPageUrl, total: tot })
-})
-
-app.get('/tradestotal', (req, res) => {
-  const queryParameters = req.query;
-  if (queryParameters.hasOwnProperty('category') && queryParameters['category'].toLowerCase() === 'all') {
-      delete queryParameters['category'];
-  }
-  const page = queryParameters.page ? parseInt(queryParameters.page) + 1 : 1;
-  const sqlQuery = parse(queryParameters, 50, page)
-  const test = Object.keys(queryParameters).length > 0 && queryParameters.category !== "All" ? db.prepare(sqlQuery[2]).all(...sqlQuery[1]).length : db.prepare("SELECT COUNT(*) as total FROM trades").get().total
-  res.send({count: test})
-})
-
-app.get('/trades', (req, res) => {
-  const page = req.query.page ? parseInt(req.query.page) + 1 : 1;
-  const sqlQuery = parse(req.query, 50, page)
-  const data = convertTime(db.prepare(sqlQuery[0]).all(...sqlQuery[1]))
-  const querystring = buildQS(req.query)
-  if (data.length === 0) {
-    res.send(``)
-  } else {
-    res.send(`
-      ${data.map((entry, index) =>`
-      <tr ${index === data.length - 1 ? `hx-get=/trades?${querystring}&page=${page} hx-trigger=revealed hx-swap=afterend` : ''}>
-        <td class="border border-slate-600 p-2 break-words text-xs sm:text-base
-          ${entry.category === "c" ? 'text-gray-500' :
-            entry.category === "u" ? 'text-green-500' :
-            entry.category === "r" ? 'text-blue-500' :
-            entry.category === "ur" ? 'text-purple-500' :
-            entry.category === "e" ? 'text-yellow-600' :
-            entry.category === "l" ? 'text-yellow-400' : ''
-          }">
-          <a target="_blank" rel="noreferrer noopener" class="hover:underline"
-            href="https://nationstates.net/page=deck/card=${entry.card_id}/season=${entry.season}">
-            S${entry.season} ${entry.card_name}
-          </a>
-        </td>
-        <td class="border border-slate-600 p-2 break-words text-xs sm:text-base">
-          <a target="_blank" rel="noreferrer noopener" class="hover:underline"
-            href="https://nationstates.net/nation=${entry.seller}">
-            ${entry.seller}
-          </a>
-        </td>
-        <td class="border border-slate-600 p-2 break-words text-xs sm:text-base">
-          <a target="_blank" rel="noreferrer noopener" class="hover:underline"
-            href="https://nationstates.net/nation=${entry.buyer}">
-            ${entry.buyer}
-          </a>
-        </td>
-        <td class="border border-slate-600 p-2 break-words text-xs sm:text-base">${entry.price}</td>
-        <td class="border border-slate-600 p-2 break-words text-[0.5rem] sm:text-base">${entry.timestamp}</td>
-      </tr>
-      `).join('')}
-    `)
+app.get('/', async (req, res) => {
+  try {
+    const queryParameters = req.query;
+    if (queryParameters.hasOwnProperty('category') && queryParameters['category'].toLowerCase() === 'all') {
+        delete queryParameters['category'];
+    }
+    const sqlQuery = parse(queryParameters, 50, 1)
+    const data = await getOrSetToCache(`/${sqlQuery[1]}`, () => convertTime(db.prepare(sqlQuery[0]).all(...sqlQuery[1])))
+    const tot = Object.keys(queryParameters).length > 0 ? await getOrSetToCache(`/${sqlQuery[1]}/tot`, () => db.prepare(sqlQuery[2]).all(...sqlQuery[1]).length) : await getOrSetToCache("SELECT COUNT(*) as total FROM trades", () => db.prepare("SELECT COUNT(*) as total FROM trades").get().total)
+    const querystring = buildQS(queryParameters)
+    const nextPageUrl = `/trades?page=2&${querystring}`;
+    logger.trace(`${querystring} / completed`)
+    res.render("index", { data: data, qs: req.query, qlery: nextPageUrl, total: tot })
+  } catch (err) {
+    logger.error({
+      params: req.query
+    }, `An error occured on the / route: ${err}`)
   }
 })
 
-app.get('/api/trades', (req, res) => {
-  const sqlQuery = parse(req.query, 1000)
-  const stmt = db.prepare(sqlQuery[0]).all(...sqlQuery[1]);
-  return res.json(stmt)
+app.get('/tradestotal', async (req, res) => {
+  try {
+    const queryParameters = req.query;
+    if (queryParameters.hasOwnProperty('category') && queryParameters['category'].toLowerCase() === 'all') {
+        delete queryParameters['category'];
+    }
+    const page = queryParameters.page ? parseInt(queryParameters.page) + 1 : 1;
+    const sqlQuery = parse(queryParameters, 50, page)
+    const tot = Object.keys(queryParameters).length > 0 ? await getOrSetToCache(`/tradestotal?${sqlQuery[1]}`, () => db.prepare(sqlQuery[2]).all(...sqlQuery[1]).length) : await getOrSetToCache("SELECT COUNT(*) as total FROM trades", () => db.prepare("SELECT COUNT(*) as total FROM trades").get().total)
+    logger.trace(`/tradestotal ${tot} completed`)
+    res.send({count: tot})
+  } catch (err) {
+    logger.error({
+      params: req.query
+    }, `An error occured on the /tradestotal route: ${err}`)
+  }
 })
 
-app.listen(port)
+app.get('/trades', async (req, res) => {
+  try {
+    const page = req.query.page ? parseInt(req.query.page) + 1 : 1;
+    const sqlQuery = parse(req.query, 50, page)
+    const data = await getOrSetToCache(`/trades?${sqlQuery[1]}`, () => convertTime(db.prepare(sqlQuery[0]).all(...sqlQuery[1])))
+    const querystring = buildQS(req.query)
+    logger.trace(`${querystring} / completed`)
+    if (data.length === 0) {
+      res.send(``)
+    } else {
+      res.send(`
+        ${data.map((entry, index) =>`
+        <tr ${index === data.length - 1 ? `hx-get=/trades?${querystring}&page=${page} hx-trigger=revealed hx-swap=afterend` : ''}>
+          <td class="border border-slate-600 p-2 break-words text-xs sm:text-base
+            ${entry.category === "c" ? 'text-gray-500' :
+              entry.category === "u" ? 'text-green-500' :
+              entry.category === "r" ? 'text-blue-500' :
+              entry.category === "ur" ? 'text-purple-500' :
+              entry.category === "e" ? 'text-yellow-600' :
+              entry.category === "l" ? 'text-yellow-400' : ''
+            }">
+            <a target="_blank" rel="noreferrer noopener" class="hover:underline"
+              href="https://nationstates.net/page=deck/card=${entry.card_id}/season=${entry.season}">
+              S${entry.season} ${entry.card_name}
+            </a>
+          </td>
+          <td class="border border-slate-600 p-2 break-words text-xs sm:text-base">
+            <a target="_blank" rel="noreferrer noopener" class="hover:underline"
+              href="https://nationstates.net/nation=${entry.seller}">
+              ${entry.seller}
+            </a>
+          </td>
+          <td class="border border-slate-600 p-2 break-words text-xs sm:text-base">
+            <a target="_blank" rel="noreferrer noopener" class="hover:underline"
+              href="https://nationstates.net/nation=${entry.buyer}">
+              ${entry.buyer}
+            </a>
+          </td>
+          <td class="border border-slate-600 p-2 break-words text-xs sm:text-base">${entry.price}</td>
+          <td class="border border-slate-600 p-2 break-words text-[0.5rem] sm:text-base">${entry.timestamp}</td>
+        </tr>
+        `).join('')}
+      `)
+    }
+  } catch (err) {
+    logger.error({
+      params: req.query
+    }, `An error occured on the /trades route: ${err}`)
+  }
+})
+
+app.get('/api/trades', limiter, async (req, res) => {
+  try {
+    const sqlQuery = parse(req.query, 1000)
+    const data = await getOrSetToCache(`/api/trades?${sqlQuery[1]}`, () => db.prepare(sqlQuery[1]).all(...sqlQuery[1]))
+    logger.trace(`${sqlQuery[0]} / completed`)
+    return res.json(data)
+  } catch (err) {
+    logger.error({
+      params: req.query
+    }, `An error occured on the /api/trades route: ${err}`)
+  }
+})
+
+app.get('/health', async (req, res) => {
+  logger.trace("We live")
+  res.status(200).send();
+});
+
+app.listen(port, () => {
+  logger.info(`App started and listening on ${port}`)
+})

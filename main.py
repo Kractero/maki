@@ -86,7 +86,6 @@ def getLatestTradesRecursivelyWithoutUpdate():
             season = trade_elem.find('SEASON').text
             seller = trade_elem.find('SELLER').text
             timestamp = trade_elem.find('TIMESTAMP').text
-
             cards_cur.execute("""
                 SELECT name
                 FROM cards
@@ -101,10 +100,12 @@ def getLatestTradesRecursivelyWithoutUpdate():
             if price is None:
                 price = 0.0
 
+            # print ((buyer, card_id, category, price, season, seller, timestamp, name))
+
             entry = tuple([buyer, int(card_id), category, float(price), int(season), seller, int(timestamp), name])
             data.append(entry)
 
-        cur.executemany("INSERT OR IGNORE INTO trades VALUES (?, ?, ?, ?, ?, ?, ?, ?)", data)
+        cur.executemany("INSERT INTO trades VALUES (?, ?, ?, ?, ?, ?, ?, ?)", data)
 
         getLatestThousandTrades(timestamp)
 
@@ -116,71 +117,70 @@ def getLatestTradesRecursivelyWithoutUpdate():
         print (row)
 
 
-def build_from_9003():
-    con = sqlite3.connect("trades.db")
-    cards_con = sqlite3.connect("cardids.db")
+# def build_from_9003():
+#     con = sqlite3.connect("trades.db")
+#     cards_con = sqlite3.connect("cardids.db")
 
-    cur = con.cursor()
-    cards_cur = cards_con.cursor()
+#     cur = con.cursor()
+#     cards_cur = cards_con.cursor()
 
-    create_table_sql = '''
-    CREATE TABLE IF NOT EXISTS trades (
-        buyer TEXT,
-        card_id INTEGER,
-        category TEXT,
-        price REAL,
-        season INTEGER,
-        seller TEXT,
-        timestamp INTEGER,
-        card_name TEXT,
-        UNIQUE(buyer, card_id, seller, timestamp)
-    )
-    '''
+#     create_table_sql = '''
+#     CREATE TABLE IF NOT EXISTS trades (
+#         buyer TEXT,
+#         card_id INTEGER,
+#         category TEXT,
+#         price REAL,
+#         season INTEGER,
+#         seller TEXT,
+#         timestamp INTEGER,
+#         card_name TEXT
+#     )
+#     '''
 
-    cur.execute(create_table_sql)
+#     cur.execute(create_table_sql)
 
-    file = open('Full Dump.txt', mode = 'r', encoding = 'utf8')
-    trade = file.readlines()
+#     file = open('Full Dump.txt', mode = 'r', encoding = 'utf8')
+#     trade = file.readlines()
 
-    data = []
+#     data = []
 
-    for line in trade:
+#     for line in trade:
 
-        arr = line.split()
+#         arr = line.split()
 
-        timestamp = arr.pop(0)
-        arr.append(int(timestamp))
+#         timestamp = arr.pop(0)
+#         arr.append(int(timestamp))
 
-        cards_cur.execute("""
-            SELECT name
-            FROM cards
-            WHERE id = ?
-        """, (arr[1],))
+#         cards_cur.execute("""
+#             SELECT name
+#             FROM cards
+#             WHERE id = ?
+#         """, (arr[1],))
 
-        name = cards_cur.fetchone()
+#         name = cards_cur.fetchone()
 
-        if name:
-            name = name[0]
+#         if name:
+#             name = name[0]
 
-        if arr[3] == 'None':
-            arr[3] = 0.0
-        else:
-            arr[3] = float(arr[3])
+#         if arr[3] == 'None':
+#             arr[3] = 0.0
+#         else:
+#             arr[3] = float(arr[3])
 
-        arr[4] = int(arr[4])
-        arr[1] = int(arr[1])
-        if arr[2] == 'ultra-rare':
-            arr[2] = 'ur'
-        else:
-            arr[2] = arr[2][0]
+#         arr[4] = int(arr[4])
+#         arr[1] = int(arr[1])
+#         if arr[2] == 'ultra-rare':
+#             arr[2] = 'ur'
+#         else:
+#             arr[2] = arr[2][0]
 
-        arr.append(name)
-        data.append(tuple(arr))
+#         arr.append(name)
+#         data.append(tuple(arr))
 
-    cur.executemany("INSERT OR IGNORE INTO trades VALUES (?, ?, ?, ?, ?, ?, ?, ?)", data)
+#     cur.executemany("INSERT INTO trades VALUES (?, ?, ?, ?, ?, ?, ?, ?)", data)
 
-    con.commit()
-    con.close()
+#     con.commit()
+#     con.close()
 
 # def combine():
 #     con3 = sqlite3.connect("trades.db")
@@ -194,7 +194,7 @@ def build_from_9003():
 #     con3.commit()
 #     con3.execute("detach database dba")
 
-build_from_9003()
+# build_from_9003()
 getLatestTradesRecursivelyWithoutUpdate()
 # combine()
 # mapCardName()

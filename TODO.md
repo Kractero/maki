@@ -1,11 +1,12 @@
-- [ ] Rate limiting
+- [x] Rate limiting
 - [ ] Cron
-- [ ] Data verification
+~~- [ ] Data verification~~
 - [x] Timestamp
 - [x] Show count of returned result
 - [ ] Have cron log updates
-- [ ] Node env production
-- [ ] Log errors somewhere
-- [ ] Helmet?
+- [x] Node env production
+- [x] Log errors somewhere
+- [x] Helmet?
 - [ ] Clone database to cloud provider
 - [ ] Mount sqlite
+- [ ] Swagger

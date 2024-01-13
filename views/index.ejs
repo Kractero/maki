@@ -25,17 +25,17 @@
   <header class="flex items-center justify-center flex-col pt-40 mb-10">
     <h2 class="font-bold text-5xl">Bazaar</h2>
     <div class="mt-4">
-      <button onclick="toggleTheme('light')" class="hidden dark:inline">
+      <button id="sun" class="hidden dark:inline">
         <i data-lucide="sun"></i>
       </button>
-      <button onclick="toggleTheme('dark')" class="inline dark:hidden">
+      <button id="moon" class="inline dark:hidden">
         <i data-lucide="moon"></i>
       </button>
     </div>
   </header>
   <main>
     <div class="flex flex-col items-center justify-center">
-      <form onsubmit="funky(event, this)" hx-get="/trades"
+      <form hx-get="/trades"
         hx-swap="innerHTML" hx-target="#trades" hx-indicator="#loading" class="flex flex-col gap-4 w-80">
         <div class="flex gap-2 justify-between">
           <label>Buyer</label>
@@ -101,7 +101,7 @@
         <p class="total text-center mb-4 <%= total === 0 ? " text-red-200" : "text-blue-400" %> "><%= total===0
             ? 'No trades found with the requested parameters' : `${total} were found.` %>
         </p>
-        <table class="table-fixed container <%= total === 0 && " hidden" %> ">
+        <table class="table-fixed w-full lg:max-w-5xl <%= total === 0 && " hidden" %> ">
           <thead>
             <tr>
               <th class="border border-slate-600 p-2 w-6 sm:w-12">Card</th>
@@ -157,20 +157,21 @@
   </main>
   <script src="https://unpkg.com/lucide@latest"></script>
   <script>
+    document.getElementById("sun").addEventListener('click', () => {
+      localStorage.setItem('theme', "light");
+      document.documentElement.classList.remove('dark');
+    })
 
-    function toggleTheme(theme) {
-      localStorage.setItem('theme', theme);
-      if (theme === 'dark') {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-    }
+    document.getElementById("moon").addEventListener('click', () => {
+      localStorage.setItem('theme', "dark");
+      document.documentElement.classList.add('dark');
+    })
 
     lucide.createIcons();
-    async function funky(event, form) {
+
+    async function funky(event) {
       event.preventDefault();
-      const formData = new FormData(form);
+      const formData = new FormData(event.target);
       const queryString = Array.from(formData.entries())
         .map(([key, value]) => {
           if (value) {
@@ -181,7 +182,7 @@
         .join('&');
       const url = new URL(location);
       const newLoc = `${url.origin}?${queryString}`
-      const num = await fetch(`http://localhost:3000/tradestotal?${queryString}`)
+      const num = await fetch(`/tradestotal?${queryString}`)
       const count = await num.json()
       if (count) {
         if (count.count === 0) {
@@ -194,6 +195,9 @@
       }
       history.pushState("", "", newLoc)
     }
+
+    document.querySelector("form").addEventListener("submit", (e) => funky(e))
+
   </script>
 </body>
 

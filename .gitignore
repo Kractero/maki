@@ -5,3 +5,4 @@ pre-combine
 node_modules
 .env
 output.css
+app.log

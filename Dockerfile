@@ -4,6 +4,7 @@ WORKDIR /app
 
 COPY package.json package-lock.json ./
 RUN npm install
+RUN npx tailwindcss -i ./public/input.css -o ./public/output.css
 
 FROM node:18-alpine AS builder
 
@@ -16,5 +17,7 @@ COPY . .
 EXPOSE 3333
 
 ENV PORT 3333
+
+ENV NODE_ENV production
 
 CMD ["npm", "start"]

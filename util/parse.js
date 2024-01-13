@@ -52,7 +52,7 @@ export function parse(params, limit, page) {
   sqlQuery += ' ORDER BY timestamp DESC';
   limit = limit ? parseInt(limit) : 1000;
 
-  const limitSqlQuery = sqlQuery + ` LIMIT ${limit} OFFSET ${(page-1) * limit}`;
+  const limitSqlQuery = sqlQuery + ` LIMIT ${limit} ` + (page ? `OFFSET ${(page - 1) * limit}` : '');
 
   return [limitSqlQuery, queryParams, sqlQuery]
 }
