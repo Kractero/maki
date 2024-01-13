@@ -12,6 +12,7 @@ import helmet from "helmet";
 import cors from "cors";
 import { getOrSetToCache } from "./util/getOrSetToCache.js";
 import { logger } from "./util/logger.js";
+import "dotenv/config.js";
 
 const port = process.env.port || 3000;
 
