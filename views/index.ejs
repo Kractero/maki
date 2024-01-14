@@ -32,6 +32,7 @@
         <i data-lucide="moon"></i>
       </button>
     </div>
+    <p>Data last modified <%= update  %></p>
   </header>
   <main>
     <div class="flex flex-col items-center justify-center">
@@ -92,9 +93,24 @@
             <option <%= qs.category === 'Legendary' ? 'selected' : '' %>>Legendary</option>
           </select>
         </div>
+        <div class="flex gap-2 justify-between">
+          <label>Sort</label>
+          <div>
+            <select id="sortval" name="sortval"
+              class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-36 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white max-w-36 my-1">
+              <option <%= qs.sortval && qs.sortval.toLowerCase() === 'timestamp' ? 'selected' : '' %>>Timestamp</option>
+              <option <%= qs.sortval && qs.sortval.toLowerCase() === 'price' ? 'selected' : '' %>>Price</option>
+            </select>
+            <select id="sortorder" name="sortorder"
+              class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-36 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white max-w-36 my-1">
+              <option <%= qs.sortorder && qs.sortorder.toLowerCase() === 'desc' ? 'selected' : '' %>>Desc</option>
+              <option <%= qs.sortorder && qs.sortorder.toLowerCase() === 'asc' ? 'selected' : '' %>>Asc</option>
+            </select>
+          </div>
+        </div>
         <button type="submit" class="p-2 bg-blue-400 rounded-md w-36 m-auto">Submit</button>
       </form>
-      <div class="mt-5">
+      <div class="mt-5 mb-40">
         <span class="htmx-indicator" id="loading">
           <img src="img/loader.gif" alt="Loading..." class="m-auto h-10" />
         </span>
@@ -181,7 +197,8 @@
         .filter(kv => kv)
         .join('&');
       const url = new URL(location);
-      const newLoc = `${url.origin}?${queryString}`
+      const newLoc = `${url.origin}?${queryString.toLowerCase()}`
+      history.pushState("", "", newLoc)
       const num = await fetch(`/tradestotal?${queryString}`)
       const count = await num.json()
       if (count) {
@@ -193,7 +210,7 @@
           document.querySelector('table').classList.remove('hidden')
         }
       }
-      history.pushState("", "", newLoc)
+
     }
 
     document.querySelector("form").addEventListener("submit", (e) => funky(e))

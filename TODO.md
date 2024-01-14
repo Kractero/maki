@@ -1,5 +1,5 @@
 - [x] Rate limiting
-- [ ] Cron
+- [X] Cron
 ~~- [ ] Data verification~~
 - [x] Timestamp
 - [x] Show count of returned result
@@ -7,6 +7,6 @@
 - [x] Node env production
 - [x] Log errors somewhere
 - [x] Helmet?
-- [ ] Clone database to cloud provider
-- [ ] Mount sqlite
+~~- [ ] Clone database to cloud provider~~ (this can be done on vps not needed inside container)
+- [x] Mount sqlite
 - [ ] Swagger

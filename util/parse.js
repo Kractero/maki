@@ -1,4 +1,4 @@
-const apiParameters = ["page", "responseFormat", "limit"]
+const apiParameters = ["page", "sortval", "limit", "sortorder"]
 const validParameters = ["buyer", "seller", "cardid", "category", "minprice", "maxprice", "price", "season", "beforetime", "sincetime"]
 
 export function parse(params, limit, page) {
@@ -41,7 +41,6 @@ export function parse(params, limit, page) {
       if (sqlConditions.length > 0) {
         sqlQuery += ` WHERE ${sqlConditions.join(' AND ')}`;
       }
-      sqlQuery += ' ORDER BY timestamp DESC';
       if (paramValue.toLowerCase() !== "all") queryParams.push(paramValue);
     }
   })
@@ -49,7 +48,7 @@ export function parse(params, limit, page) {
   if (sqlConditions.length > 0) {
     sqlQuery += ` WHERE ${sqlConditions.join(' AND ')}`;
   }
-  sqlQuery += ' ORDER BY timestamp DESC';
+  sqlQuery += ` ORDER BY ${params["sortval"] ? params["sortval"].toUpperCase() : "TIMESTAMP"} ${params["sortorder"] ? params["sortorder"].toUpperCase() : "DESC"}`;
   limit = limit ? parseInt(limit) : 1000;
 
   const limitSqlQuery = sqlQuery + ` LIMIT ${limit} ` + (page ? `OFFSET ${(page - 1) * limit}` : '');

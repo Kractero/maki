@@ -13,6 +13,7 @@ import cors from "cors";
 import { getOrSetToCache } from "./util/getOrSetToCache.js";
 import { logger } from "./util/logger.js";
 import "dotenv/config.js";
+import updates from "./updates.json" assert { type: "json" }
 
 const port = process.env.port || 3000;
 
@@ -36,8 +37,8 @@ app.use(  helmet.contentSecurityPolicy({
     defaultSrc: ["'self'"],
     scriptSrc: [
       "'self'",
-      'https://unpkg.com', // Allow scripts from unpkg.com
-      "'unsafe-inline'",   // Allowing inline scripts (consider removing this in production)
+      'https://unpkg.com',
+      "'unsafe-inline'"
     ],
   },
 }));
@@ -46,17 +47,16 @@ app.use(express.static(join(__dirname + "/public")));
 
 app.get('/', async (req, res) => {
   try {
-    const queryParameters = req.query;
-    if (queryParameters.hasOwnProperty('category') && queryParameters['category'].toLowerCase() === 'all') {
+    const sqlQuery = parse(req.query, 50, 1)
+    const data = await getOrSetToCache(`/${sqlQuery[0]}${sqlQuery[1]}${sqlQuery[2]}`, () => convertTime(db.prepare(sqlQuery[0]).all(...sqlQuery[1])))
+    if (req.query.hasOwnProperty('category') && req.query['category'].toLowerCase() === 'all') {
         delete queryParameters['category'];
     }
-    const sqlQuery = parse(queryParameters, 50, 1)
-    const data = await getOrSetToCache(`/${sqlQuery[1]}`, () => convertTime(db.prepare(sqlQuery[0]).all(...sqlQuery[1])))
-    const tot = Object.keys(queryParameters).length > 0 ? await getOrSetToCache(`/${sqlQuery[1]}/tot`, () => db.prepare(sqlQuery[2]).all(...sqlQuery[1]).length) : await getOrSetToCache("SELECT COUNT(*) as total FROM trades", () => db.prepare("SELECT COUNT(*) as total FROM trades").get().total)
-    const querystring = buildQS(queryParameters)
+    const tot = Object.keys(req.query).filter(key => !key.includes('sort')).length > 0 ? await getOrSetToCache(`/${sqlQuery[0]}${sqlQuery[1]}${sqlQuery[2]}/tot`, () => db.prepare(sqlQuery[2]).all(...sqlQuery[1]).length) : updates[0].records
+    const querystring = buildQS(req.query)
     const nextPageUrl = `/trades?page=2&${querystring}`;
     logger.trace(`${querystring} / completed`)
-    res.render("index", { data: data, qs: req.query, qlery: nextPageUrl, total: tot })
+    res.render("index", { data: data, qs: req.query, qlery: nextPageUrl, total: tot, update: updates[0].lastUpdate })
   } catch (err) {
     logger.error({
       params: req.query
@@ -70,11 +70,13 @@ app.get('/tradestotal', async (req, res) => {
     if (queryParameters.hasOwnProperty('category') && queryParameters['category'].toLowerCase() === 'all') {
         delete queryParameters['category'];
     }
+    delete queryParameters['sortval'];
+    delete queryParameters['sortorder'];
     const page = queryParameters.page ? parseInt(queryParameters.page) + 1 : 1;
     const sqlQuery = parse(queryParameters, 50, page)
-    const tot = Object.keys(queryParameters).length > 0 ? await getOrSetToCache(`/tradestotal?${sqlQuery[1]}`, () => db.prepare(sqlQuery[2]).all(...sqlQuery[1]).length) : await getOrSetToCache("SELECT COUNT(*) as total FROM trades", () => db.prepare("SELECT COUNT(*) as total FROM trades").get().total)
+    const tot = Object.keys(queryParameters).length > 0 ? await getOrSetToCache(`/tradestotal?${sqlQuery[1]}`, () => db.prepare(sqlQuery[2]).all(...sqlQuery[1]).length) : updates[0].records
     logger.trace(`/tradestotal ${tot} completed`)
-    res.send({count: tot})
+    res.send({count: tot, update: updates[0].lastUpdate})
   } catch (err) {
     logger.error({
       params: req.query
@@ -86,7 +88,7 @@ app.get('/trades', async (req, res) => {
   try {
     const page = req.query.page ? parseInt(req.query.page) + 1 : 1;
     const sqlQuery = parse(req.query, 50, page)
-    const data = await getOrSetToCache(`/trades?${sqlQuery[1]}`, () => convertTime(db.prepare(sqlQuery[0]).all(...sqlQuery[1])))
+    const data = await getOrSetToCache(`/trades?${sqlQuery[0]}${sqlQuery[1]}${sqlQuery[2]}`, () => convertTime(db.prepare(sqlQuery[0]).all(...sqlQuery[1])))
     const querystring = buildQS(req.query)
     logger.trace(`${querystring} / completed`)
     if (data.length === 0) {
@@ -136,7 +138,7 @@ app.get('/trades', async (req, res) => {
 app.get('/api/trades', limiter, async (req, res) => {
   try {
     const sqlQuery = parse(req.query, 1000)
-    const data = await getOrSetToCache(`/api/trades?${sqlQuery[1]}`, () => db.prepare(sqlQuery[1]).all(...sqlQuery[1]))
+    const data = await getOrSetToCache(`/api/trades?${sqlQuery[0]}${sqlQuery[1]}${sqlQuery[2]}`, () => db.prepare(sqlQuery[1]).all(...sqlQuery[1]))
     logger.trace(`${sqlQuery[0]} / completed`)
     return res.json(data)
   } catch (err) {

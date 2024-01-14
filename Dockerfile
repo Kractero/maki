@@ -1,18 +1,18 @@
 FROM node:21-alpine AS deps
-RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 COPY package.json package-lock.json ./
 RUN npm install
-RUN npx tailwindcss -i ./public/input.css -o ./public/output.css
 
-FROM node:18-alpine AS builder
+FROM node:21-alpine AS builder
 
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
 
 COPY . .
+
+RUN npx tailwindcss -i ./public/input.css -o ./public/output.css
 
 EXPOSE 3333
 
