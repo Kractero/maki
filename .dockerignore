@@ -1,2 +1,6 @@
 .git
 .gitignore
+trades.db
+app.log
+updates.json
+cardids.db

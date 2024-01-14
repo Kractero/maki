@@ -5,30 +5,39 @@ services:
       context: .
     volumes:
       - ./trades.db:/app/trades.db
+      - ./updates.json:/app/updates.json
+      - ./app.log/app/app.log
+      - ./cardids.db/app/cardids.db
     environment:
       REDIS_HOST: ${REDIS_HOST}
       REDIS_PORT: ${REDIS_PORT}
     restart: always
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "curl",
-          "--fail",
-          "-s",
-          "-o",
-          "/dev/null",
-          "https://bazaar.sideroca.com/health",
-        ]
-      interval: 60s
-      timeout: 10s
-      retries: 3
+    # healthcheck:
+    #   test:
+    #     [
+    #       "CMD",
+    #       "curl",
+    #       "--fail",
+    #       "-s",
+    #       "-o",
+    #       "/dev/null",
+    #       "https://bazaar.sideroca.com/health",
+    #     ]
+    #   interval: 60s
+    #   timeout: 10s
+    #   retries: 3
+    networks:
+      - reverse-proxy
   bazaarcache:
     restart: always
     image: redis:alpine
     container_name: bazaarcache
     volumes:
       - bazaarcache:/data
+    networks:
+      - reverse-proxy
 volumes:
   bazaarcache: null
-networks: {}
+networks:
+  reverse-proxy:
+    external: true
