@@ -49,7 +49,7 @@ export function parse(params, limit, page) {
     sqlQuery += ` WHERE ${sqlConditions.join(' AND ')}`;
   }
   sqlQuery += ` ORDER BY ${params["sortval"] ? params["sortval"].toUpperCase() : "TIMESTAMP"} ${params["sortorder"] ? params["sortorder"].toUpperCase() : "DESC"}`;
-  limit = limit ? parseInt(limit) : 1000;
+  limit = params.limit ? params.limit : parseInt(limit) ? limit : 1000;
 
   const limitSqlQuery = sqlQuery + ` LIMIT ${limit} ` + (page ? `OFFSET ${(page - 1) * limit}` : '');
 

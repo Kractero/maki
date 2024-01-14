@@ -44,6 +44,7 @@ app.use(  helmet.contentSecurityPolicy({
 }));
 app.use(cors());
 app.use(express.static(join(__dirname + "/public")));
+const validParameters = ["buyer", "seller", "cardid", "category", "minprice", "maxprice", "price", "season", "beforetime", "sincetime"]
 
 app.get('/', async (req, res) => {
   try {
@@ -52,7 +53,7 @@ app.get('/', async (req, res) => {
     if (req.query.hasOwnProperty('category') && req.query['category'].toLowerCase() === 'all') {
         delete queryParameters['category'];
     }
-    const tot = Object.keys(req.query).filter(key => !key.includes('sort')).length > 0 ? await getOrSetToCache(`/${sqlQuery[0]}${sqlQuery[1]}${sqlQuery[2]}/tot`, () => db.prepare(sqlQuery[2]).all(...sqlQuery[1]).length) : updates[0].records
+    const tot = Object.keys(req.query).filter(key => validParameters.includes(key)).length > 0 ? await getOrSetToCache(`/${sqlQuery[0]}${sqlQuery[1]}${sqlQuery[2]}/tot`, () => db.prepare(sqlQuery[2]).all(...sqlQuery[1]).length) : updates[0].records
     const querystring = buildQS(req.query)
     const nextPageUrl = `/trades?page=2&${querystring}`;
     logger.trace(`${querystring} / completed`)
@@ -70,11 +71,9 @@ app.get('/tradestotal', async (req, res) => {
     if (queryParameters.hasOwnProperty('category') && queryParameters['category'].toLowerCase() === 'all') {
         delete queryParameters['category'];
     }
-    delete queryParameters['sortval'];
-    delete queryParameters['sortorder'];
     const page = queryParameters.page ? parseInt(queryParameters.page) + 1 : 1;
     const sqlQuery = parse(queryParameters, 50, page)
-    const tot = Object.keys(queryParameters).length > 0 ? await getOrSetToCache(`/tradestotal?${sqlQuery[1]}`, () => db.prepare(sqlQuery[2]).all(...sqlQuery[1]).length) : updates[0].records
+    const tot = Object.keys(req.query).filter(key => validParameters.includes(key)) > 0 ? await getOrSetToCache(`/tradestotal?${sqlQuery[1]}`, () => db.prepare(sqlQuery[2]).all(...sqlQuery[1]).length) : updates[0].records
     logger.trace(`/tradestotal ${tot} completed`)
     res.send({count: tot, update: updates[0].lastUpdate})
   } catch (err) {
@@ -137,10 +136,12 @@ app.get('/trades', async (req, res) => {
 
 app.get('/api/trades', limiter, async (req, res) => {
   try {
+    if (req.query.limit) console.log("OMG !")
     const sqlQuery = parse(req.query, 1000)
-    const data = await getOrSetToCache(`/api/trades?${sqlQuery[0]}${sqlQuery[1]}${sqlQuery[2]}`, () => db.prepare(sqlQuery[1]).all(...sqlQuery[1]))
+    const data = await getOrSetToCache(`/api/trades?${sqlQuery[0]}${sqlQuery[1]}${sqlQuery[2]}`, () => db.prepare(sqlQuery[0]).all(...sqlQuery[1]))
+    const tot = Object.keys(req.query).filter(key => validParameters.includes(key)).length > 0 ? await getOrSetToCache(`/${sqlQuery[0]}${sqlQuery[1]}${sqlQuery[2]}/tot`, () => db.prepare(sqlQuery[2]).all(...sqlQuery[1]).length) : updates[0].records
     logger.trace(`${sqlQuery[0]} / completed`)
-    return res.json(data)
+    return res.json({"count": tot, trades: data})
   } catch (err) {
     logger.error({
       params: req.query
