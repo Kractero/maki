@@ -14,6 +14,7 @@ import { getOrSetToCache } from "./util/getOrSetToCache.js";
 import { logger } from "./util/logger.js";
 import "dotenv/config.js";
 import updates from "./updates.json" assert { type: "json" }
+import { minutes } from "./util/timeSinceUpdate.js";
 
 const port = process.env.port || 3000;
 
@@ -57,7 +58,7 @@ app.get('/', async (req, res) => {
     const querystring = buildQS(req.query)
     const nextPageUrl = `/trades?page=2&${querystring}`;
     logger.trace(`${querystring} / completed`)
-    res.render("index", { data: data, qs: req.query, qlery: nextPageUrl, total: tot, update: updates[0].lastUpdate })
+    res.render("index", { data: data, qs: req.query, qlery: nextPageUrl, total: tot, update: minutes(updates[0].lastUpdate) })
   } catch (err) {
     logger.error({
       params: req.query
@@ -75,7 +76,7 @@ app.get('/tradestotal', async (req, res) => {
     const sqlQuery = parse(queryParameters, 50, page)
     const tot = Object.keys(req.query).filter(key => validParameters.includes(key)) > 0 ? await getOrSetToCache(`/tradestotal?${sqlQuery[1]}`, () => db.prepare(sqlQuery[2]).all(...sqlQuery[1]).length) : updates[0].records
     logger.trace(`/tradestotal ${tot} completed`)
-    res.send({count: tot, update: updates[0].lastUpdate})
+    res.send({count: tot, update: minutes(updates[0].lastUpdate)} )
   } catch (err) {
     logger.error({
       params: req.query
@@ -141,7 +142,7 @@ app.get('/api/trades', limiter, async (req, res) => {
     const data = await getOrSetToCache(`/api/trades?${sqlQuery[0]}${sqlQuery[1]}${sqlQuery[2]}`, () => db.prepare(sqlQuery[0]).all(...sqlQuery[1]))
     const tot = Object.keys(req.query).filter(key => validParameters.includes(key)).length > 0 ? await getOrSetToCache(`/${sqlQuery[0]}${sqlQuery[1]}${sqlQuery[2]}/tot`, () => db.prepare(sqlQuery[2]).all(...sqlQuery[1]).length) : updates[0].records
     logger.trace(`${sqlQuery[0]} / completed`)
-    return res.json({"count": tot, trades: data})
+    return res.json({"count": tot, trades: data, "last_updated": updates[0].lastUpdate})
   } catch (err) {
     logger.error({
       params: req.query

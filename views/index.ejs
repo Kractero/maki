@@ -18,7 +18,7 @@
         document.documentElement.classList.toggle('light');
       }
     }
-</script>
+  </script>
 </head>
 
 <body class="font-main dark:bg-slate-900 dark:text-white" id="themeSwitcher">
@@ -32,12 +32,14 @@
         <i data-lucide="moon"></i>
       </button>
     </div>
-    <p>Data last modified <%= update  %></p>
+    <p class="mt-4">
+      Data last modified <%= update %>
+    </p>
   </header>
   <main>
     <div class="flex flex-col items-center justify-center">
-      <form hx-get="/trades"
-        hx-swap="innerHTML" hx-target="#trades" hx-indicator="#loading" class="flex flex-col gap-4 w-80">
+      <form hx-get="/trades" hx-swap="innerHTML" hx-target="#trades" hx-indicator="#loading"
+        class="flex flex-col gap-4 w-80">
         <div class="flex gap-2 justify-between">
           <label>Buyer</label>
           <input type="text" id="buyer" name="buyer"
@@ -53,25 +55,23 @@
         <div class="flex gap-2 justify-between">
           <label>Price</label>
           <div>
-            <input  type="number" min="0" step="0.01" id="minprice" name="minprice"
+            <input type="number" min="0" step="0.01" id="minprice" name="minprice"
               class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white max-w-36 my-1"
               value="<%= qs.minprice || "" %>">
             <input type="number" min="0" step="0.01" id="maxprice" name="maxprice"
               class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white max-w-36 my-1"
               value="<%= qs.maxprice || "" %>">
-            </div>
+          </div>
         </div>
         <div class="flex gap-2 justify-between">
           <label>Timestamp</label>
           <div>
             <input type="date" id="beforetime" name="beforetime" type="text"
               class="my-1 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
-              placeholder="Select date"
-              value="<%= qs.beforetime || "" %>">
+              placeholder="Select date" value="<%= qs.beforetime || "" %>">
             <input type="date" id="sincetime" name="sincetime" type="text"
               class="my-1 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
-              placeholder="Select date"
-              value="<%= qs.sincetime || ""  %>">
+              placeholder="Select date" value="<%= qs.sincetime || ""  %>">
           </div>
         </div>
         <div class="flex gap-2 justify-between">
@@ -84,13 +84,13 @@
           <label>Category</label>
           <select id="category" name="category"
             class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white max-w-36">
-            <option <%= qs.category === 'All' ? 'selected' : '' %>>All</option>
-            <option <%= qs.category === 'Common' ? 'selected' : '' %>>Common</option>
-            <option <%= qs.category === 'Uncommon' ? 'selected' : '' %>>Uncommon</option>
-            <option <%= qs.category === 'Rare' ? 'selected' : '' %>>Rare</option>
-            <option <%= qs.category === 'Ultra Rare' ? 'selected' : '' %>>Ultra Rare</option>
-            <option <%= qs.category === 'Epic' ? 'selected' : '' %>>Epic</option>
-            <option <%= qs.category === 'Legendary' ? 'selected' : '' %>>Legendary</option>
+            <option <%=qs.category==='All' ? 'selected' : '' %>>All</option>
+            <option <%=qs.category==='Common' ? 'selected' : '' %>>Common</option>
+            <option <%=qs.category==='Uncommon' ? 'selected' : '' %>>Uncommon</option>
+            <option <%=qs.category==='Rare' ? 'selected' : '' %>>Rare</option>
+            <option <%=qs.category==='Ultra Rare' ? 'selected' : '' %>>Ultra Rare</option>
+            <option <%=qs.category==='Epic' ? 'selected' : '' %>>Epic</option>
+            <option <%=qs.category==='Legendary' ? 'selected' : '' %>>Legendary</option>
           </select>
         </div>
         <div class="flex gap-2 justify-between">
@@ -98,13 +98,13 @@
           <div>
             <select id="sortval" name="sortval"
               class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-36 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white max-w-36 my-1">
-              <option <%= qs.sortval && qs.sortval.toLowerCase() === 'timestamp' ? 'selected' : '' %>>Timestamp</option>
-              <option <%= qs.sortval && qs.sortval.toLowerCase() === 'price' ? 'selected' : '' %>>Price</option>
+              <option <%=qs.sortval && qs.sortval.toLowerCase()==='timestamp' ? 'selected' : '' %>>Timestamp</option>
+              <option <%=qs.sortval && qs.sortval.toLowerCase()==='price' ? 'selected' : '' %>>Price</option>
             </select>
             <select id="sortorder" name="sortorder"
               class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-36 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white max-w-36 my-1">
-              <option <%= qs.sortorder && qs.sortorder.toLowerCase() === 'desc' ? 'selected' : '' %>>Desc</option>
-              <option <%= qs.sortorder && qs.sortorder.toLowerCase() === 'asc' ? 'selected' : '' %>>Asc</option>
+              <option <%=qs.sortorder && qs.sortorder.toLowerCase()==='desc' ? 'selected' : '' %>>Desc</option>
+              <option <%=qs.sortorder && qs.sortorder.toLowerCase()==='asc' ? 'selected' : '' %>>Asc</option>
             </select>
           </div>
         </div>
@@ -132,12 +132,12 @@
               <tr <%=(index===data.length - 1 && data.length===50) ? `hx-get=${qlery} hx-trigger=revealed
                 hx-swap=afterend` : '' %>>
                 <td class="border border-slate-600 p-2 break-words text-xs sm:text-base
-                  <% if (entry.category === "c") { %> text-gray-500 <% } %>
-                    <% if (entry.category === "u" ) { %> text-green-500 <% } %>
-                        <% if (entry.category === "r" ) { %> text-blue-500 <% } %>
-                            <% if (entry.category === "ur" ) { %> text-purple-500 <% } %>
-                                <% if (entry.category === "e" ) { %> text-yellow-600 <% } %>
-                                    <% if (entry.category === "l" ) { %> text-yellow-400 <% } %>
+                  <% if (entry.category === " c") { %> text-gray-500 <% } %>
+                    <% if (entry.category==="u" ) { %> text-green-500 <% } %>
+                        <% if (entry.category==="r" ) { %> text-blue-500 <% } %>
+                            <% if (entry.category==="ur" ) { %> text-purple-500 <% } %>
+                                <% if (entry.category==="e" ) { %> text-yellow-600 <% } %>
+                                    <% if (entry.category==="l" ) { %> text-yellow-400 <% } %>
                                         "
                                         >
                                         <a target="_blank" rel="noreferrer noopener" class="hover:underline"
@@ -206,7 +206,7 @@
           document.querySelector('.total').innerHTML = `<p class="text-red-200 text-center mb-4">No trades found with the requested parameters.</p>`
           document.querySelector('table').classList.add('hidden')
         } else {
-          document.querySelector('.total').innerHTML =  `<p class="text-center text-blue-400 mb-4">${count.count} were found.</p>`
+          document.querySelector('.total').innerHTML = `<p class="text-center text-blue-400 mb-4">${count.count} were found.</p>`
           document.querySelector('table').classList.remove('hidden')
         }
       }
