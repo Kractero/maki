@@ -137,7 +137,6 @@ app.get('/trades', async (req, res) => {
 
 app.get('/api/trades', limiter, async (req, res) => {
   try {
-    if (req.query.limit) console.log("OMG !")
     const sqlQuery = parse(req.query, 1000)
     const data = await getOrSetToCache(`/api/trades?${sqlQuery[0]}${sqlQuery[1]}${sqlQuery[2]}`, () => db.prepare(sqlQuery[0]).all(...sqlQuery[1]))
     const tot = Object.keys(req.query).filter(key => validParameters.includes(key)).length > 0 ? await getOrSetToCache(`/${sqlQuery[0]}${sqlQuery[1]}${sqlQuery[2]}/tot`, () => db.prepare(sqlQuery[2]).all(...sqlQuery[1]).length) : updates[0].records
