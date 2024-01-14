@@ -113,8 +113,24 @@ def getLatestTradesRecursivelyWithoutUpdate():
 
     con.commit()
 
-    for row in cur.execute("SELECT * FROM trades ORDER BY timestamp DESC LIMIT 1"):
-        print (row)
+    current_timestamp = int(datetime.datetime.now().timestamp())
+    num_rows = cur.execute("SELECT COUNT(*) FROM trades").fetchone()[0]
+
+    with open('updates.json', 'r') as json_file:
+        json_data = json.load(json_file)
+
+    new_record = {
+        "lastUpdate": current_timestamp,
+        "records": num_rows
+    }
+
+    json_data.insert(0, new_record)
+
+    with open('updates.json', 'w') as json_file:
+        json.dump(json_data, json_file)
+
+    con.close()
+    cards_con.close()
 
 
 # def build_from_9003():
