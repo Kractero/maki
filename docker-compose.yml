@@ -3,6 +3,7 @@ services:
   bazaar:
     build:
       context: .
+    container_name: bazaar
     volumes:
       - ./trades.db:/app/trades.db
       - ./updates.json:/app/updates.json

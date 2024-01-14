@@ -16,7 +16,7 @@ import "dotenv/config.js";
 import updates from "./updates.json" assert { type: "json" }
 import { minutes } from "./util/timeSinceUpdate.js";
 
-const port = process.env.port || 3000;
+const port = process.env.PORT || 3000;
 
 const db = new Database('trades.db');
 
