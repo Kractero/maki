@@ -8,3 +8,4 @@ output.css
 app.log
 data/*.jsonl
 updates.json
+venv

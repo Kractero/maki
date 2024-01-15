@@ -4,7 +4,8 @@ import xml.etree.ElementTree as ET
 from time import sleep
 import sqlite3
 import datetime
-import json
+import redis
+import os
 
 # def mapCardName():
 #     # con = sqlite3.connect("updated_trades.db")
@@ -122,6 +123,10 @@ def getLatestTradesRecursivelyWithoutUpdate():
 
     con.close()
     cards_con.close()
+
+    redis_client = redis.StrictRedis(host=os.environ.get('REDIS_HOST', 'localhost'), port=int(os.environ.get('REDIS_PORT', 6379)), db=0)
+
+    redis_client.flushall()
 
 def data_table():
     con = sqlite3.connect("trades.db")
