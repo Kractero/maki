@@ -6,8 +6,11 @@
 <body class="font-main dark:bg-slate-900 dark:text-white" id="themeSwitcher">
   <header class="flex items-center justify-center flex-col pt-40 mb-10">
     <%- include('./partials/header'); %>
-    <p class="mt-4">
-      Data last modified <%= update %>
+    <p class="my-4">
+      Data last modified <%= update %>.
+    </p>
+    <p>
+      Counting <%= count.toLocaleString() %> trades since April 1st 2018.
     </p>
   </header>
   <main>

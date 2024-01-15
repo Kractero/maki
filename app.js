@@ -65,7 +65,7 @@ app.get('/', async (req, res) => {
     const querystring = buildQS(req.query)
     const nextPageUrl = `/trades?page=2&${querystring}`;
     logger.info(`BASE ROUTE - ${querystring} / completed`)
-    res.render("index", { data: data, qs: req.query, qlery: nextPageUrl, total: tot, update: minutes(newestRecord.last_updated) })
+    res.render("index", { data: data, qs: req.query, qlery: nextPageUrl, total: tot, update: minutes(newestRecord.last_updated), count: newestRecord.records })
   } catch (err) {
     logger.error({
       params: req.query

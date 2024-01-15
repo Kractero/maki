@@ -33,7 +33,7 @@ The API is built with Express and wraps the SQLite database containing trade rec
   - **Optional Parameters:**
     - `limit`: Limit the number of returned results (defaults to 1000).
     - `sortval`: Sort results by `price` or `timestamp`, `timestamp` default.
-    - `sortorder`: Sorting order (`asc` or `desc`, `desc` defai;t).
+    - `sortorder`: Sorting order `asc` or `desc`, `desc` default.
 
   - **Rate Limit:** 50 requests per 30 seconds.
 
