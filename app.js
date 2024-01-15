@@ -20,6 +20,7 @@ import { readFileSync } from "fs";
 const port = process.env.PORT || 3000;
 
 const db = new Database('trades.db');
+db.pragma('journal_mode = WAL');
 
 const app = express()
 app.set("view engine", "ejs")
