@@ -126,7 +126,7 @@ def getLatestTradesRecursivelyWithoutUpdate():
     cards_con.close()
 
     load_dotenv()
-    redis_client = redis.StrictRedis(host=os.environ.get('REDIS_HOST', 'localhost'), port=int(os.environ.get('REDIS_PORT', 6379)), db=0)
+    redis_client = redis.StrictRedis(host=os.environ.get('REDIS_DOCKER_HOST', 'localhost'), port=int(os.environ.get('REDIS_PORT', 6379)), db=0)
 
     redis_client.flushall()
 
