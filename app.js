@@ -55,6 +55,7 @@ const validParameters = ["buyer", "seller", "cardid", "category", "minprice", "m
 
 app.get('/', async (req, res) => {
   try {
+    const queryParameters = req.query;
     const sqlQuery = parse(req.query, 50, 1)
     const data = await getOrSetToCache(`/${sqlQuery[0]}${sqlQuery[1]}${sqlQuery[2]}`, () => convertTime(db.prepare(sqlQuery[0]).all(...sqlQuery[1])))
     if (req.query.hasOwnProperty('category') && req.query['category'].toLowerCase() === 'all') {
