@@ -1,0 +1,13 @@
+<script>
+  document.getElementById("sun").addEventListener('click', () => {
+    localStorage.setItem('theme', "light");
+    document.documentElement.classList.remove('dark');
+  })
+
+  document.getElementById("moon").addEventListener('click', () => {
+    localStorage.setItem('theme', "dark");
+    document.documentElement.classList.add('dark');
+  })
+  lucide.createIcons()
+</script>
+<script async src="https://nakiri.vercel.app/script.js" data-website-id="4749307b-cc3d-4dbc-bf54-87e9e5c3d1df"></script>

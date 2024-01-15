@@ -1,0 +1,20 @@
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bazaar</title>
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="/output.css" rel="stylesheet">
+  <link rel="icon" href="/favicon.ico">
+  <script>
+    if (localStorage.getItem("theme")) {
+      document.documentElement.classList.toggle(localStorage.getItem("theme"))
+    } else {
+      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.documentElement.classList.toggle('dark');
+      } else {
+        document.documentElement.classList.toggle('light');
+      }
+    }
+  </script>
+</head>

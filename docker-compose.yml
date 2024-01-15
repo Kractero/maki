@@ -13,20 +13,20 @@ services:
       REDIS_HOST: ${REDIS_HOST}
       REDIS_PORT: ${REDIS_PORT}
     restart: always
-    # healthcheck:
-    #   test:
-    #     [
-    #       "CMD",
-    #       "curl",
-    #       "--fail",
-    #       "-s",
-    #       "-o",
-    #       "/dev/null",
-    #       "https://bazaar.sideroca.com/health",
-    #     ]
-    #   interval: 60s
-    #   timeout: 10s
-    #   retries: 3
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "--fail",
+          "-s",
+          "-o",
+          "/dev/null",
+          "https://bazaar.sideroca.com/health",
+        ]
+      interval: 60s
+      timeout: 10s
+      retries: 3
     networks:
       - reverse-proxy
   bazaarcache:

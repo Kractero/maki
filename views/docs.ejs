@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<%- include('./partials/head'); %>
+
+  <body class="flex flex-col items-center font-main dark:bg-slate-900 dark:text-white" id="themeSwitcher">
+    <main>
+      <header class="flex items-center justify-center flex-col pt-40 mb-10">
+        <%- include('./partials/header'); %>
+      </header>
+      <div class="prose dark:prose-invert mb-40">
+        <%- md %>
+      </div>
+    </main>
+  </body>
+
+  <%- include('./partials/scripts'); %>
+
+</html>

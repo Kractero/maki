@@ -1,37 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
-  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <link href="/output.css" rel="stylesheet">
-  <script>
-    if (localStorage.getItem("theme")) {
-      document.documentElement.classList.toggle(localStorage.getItem("theme"))
-    } else {
-      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        document.documentElement.classList.toggle('dark');
-      } else {
-        document.documentElement.classList.toggle('light');
-      }
-    }
-  </script>
-</head>
+<%- include('./partials/head'); %>
 
 <body class="font-main dark:bg-slate-900 dark:text-white" id="themeSwitcher">
   <header class="flex items-center justify-center flex-col pt-40 mb-10">
-    <h2 class="font-bold text-5xl">Bazaar</h2>
-    <div class="mt-4">
-      <button id="sun" class="hidden dark:inline">
-        <i data-lucide="sun"></i>
-      </button>
-      <button id="moon" class="inline dark:hidden">
-        <i data-lucide="moon"></i>
-      </button>
-    </div>
+    <%- include('./partials/header'); %>
     <p class="mt-4">
       Data last modified <%= update %>
     </p>
@@ -171,20 +145,8 @@
       </div>
     </div>
   </main>
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <%- include('./partials/scripts'); %>
   <script>
-    document.getElementById("sun").addEventListener('click', () => {
-      localStorage.setItem('theme', "light");
-      document.documentElement.classList.remove('dark');
-    })
-
-    document.getElementById("moon").addEventListener('click', () => {
-      localStorage.setItem('theme', "dark");
-      document.documentElement.classList.add('dark');
-    })
-
-    lucide.createIcons();
-
     async function funky(event) {
       event.preventDefault();
       const formData = new FormData(event.target);

@@ -13,8 +13,9 @@ import cors from "cors";
 import { getOrSetToCache } from "./util/getOrSetToCache.js";
 import { logger } from "./util/logger.js";
 import "dotenv/config.js";
-import updates from "./updates.json" assert { type: "json" }
 import { minutes } from "./util/timeSinceUpdate.js";
+import { marked } from "marked";
+import { readFileSync } from "fs";
 
 const port = process.env.PORT || 3000;
 
@@ -39,7 +40,12 @@ app.use(  helmet.contentSecurityPolicy({
     scriptSrc: [
       "'self'",
       'https://unpkg.com',
+      'https://nakiri.vercel.app',
       "'unsafe-inline'"
+    ],
+    connectSrc: [
+      "'self'",
+      'https://nakiri.vercel.app'
     ],
   },
 }));
@@ -54,11 +60,12 @@ app.get('/', async (req, res) => {
     if (req.query.hasOwnProperty('category') && req.query['category'].toLowerCase() === 'all') {
         delete queryParameters['category'];
     }
-    const tot = Object.keys(req.query).filter(key => validParameters.includes(key)).length > 0 ? await getOrSetToCache(`/${sqlQuery[0]}${sqlQuery[1]}${sqlQuery[2]}/tot`, () => db.prepare(sqlQuery[2]).all(...sqlQuery[1]).length) : updates[0].records
+    const newestRecord = db.prepare('SELECT * FROM records ORDER BY last_updated DESC LIMIT 1;').get();
+    const tot = Object.keys(req.query).filter(key => validParameters.includes(key)).length > 0 ? await getOrSetToCache(`/${sqlQuery[0]}${sqlQuery[1]}${sqlQuery[2]}/tot`, () => db.prepare(sqlQuery[2]).all(...sqlQuery[1]).length) : newestRecord.records
     const querystring = buildQS(req.query)
     const nextPageUrl = `/trades?page=2&${querystring}`;
-    logger.trace(`${querystring} / completed`)
-    res.render("index", { data: data, qs: req.query, qlery: nextPageUrl, total: tot, update: minutes(updates[0].lastUpdate) })
+    logger.info(`BASE ROUTE - ${querystring} / completed`)
+    res.render("index", { data: data, qs: req.query, qlery: nextPageUrl, total: tot, update: minutes(newestRecord.last_updated) })
   } catch (err) {
     logger.error({
       params: req.query
@@ -74,9 +81,10 @@ app.get('/tradestotal', async (req, res) => {
     }
     const page = queryParameters.page ? parseInt(queryParameters.page) + 1 : 1;
     const sqlQuery = parse(queryParameters, 50, page)
-    const tot = Object.keys(req.query).filter(key => validParameters.includes(key)) > 0 ? await getOrSetToCache(`/tradestotal?${sqlQuery[1]}`, () => db.prepare(sqlQuery[2]).all(...sqlQuery[1]).length) : updates[0].records
-    logger.trace(`/tradestotal ${tot} completed`)
-    res.send({count: tot, update: minutes(updates[0].lastUpdate)} )
+    const newestRecord = db.prepare('SELECT * FROM records ORDER BY last_updated DESC LIMIT 1;').get();
+    const tot = Object.keys(req.query).filter(key => validParameters.includes(key)) > 0 ? await getOrSetToCache(`/tradestotal?${sqlQuery[1]}`, () => db.prepare(sqlQuery[2]).all(...sqlQuery[1]).length) : newestRecord.records
+    logger.info(`TRADES TOTAL - /tradestotal ${tot} completed`)
+    res.send({count: tot, update: minutes(newestRecord.last_updated)} )
   } catch (err) {
     logger.error({
       params: req.query
@@ -90,7 +98,7 @@ app.get('/trades', async (req, res) => {
     const sqlQuery = parse(req.query, 50, page)
     const data = await getOrSetToCache(`/trades?${sqlQuery[0]}${sqlQuery[1]}${sqlQuery[2]}`, () => convertTime(db.prepare(sqlQuery[0]).all(...sqlQuery[1])))
     const querystring = buildQS(req.query)
-    logger.trace(`${querystring} / completed`)
+    logger.info(`TRADES PAGINATED - ${querystring} / completed`)
     if (data.length === 0) {
       res.send(``)
     } else {
@@ -139,9 +147,10 @@ app.get('/api/trades', limiter, async (req, res) => {
   try {
     const sqlQuery = parse(req.query, 1000)
     const data = await getOrSetToCache(`/api/trades?${sqlQuery[0]}${sqlQuery[1]}${sqlQuery[2]}`, () => db.prepare(sqlQuery[0]).all(...sqlQuery[1]))
-    const tot = Object.keys(req.query).filter(key => validParameters.includes(key)).length > 0 ? await getOrSetToCache(`/${sqlQuery[0]}${sqlQuery[1]}${sqlQuery[2]}/tot`, () => db.prepare(sqlQuery[2]).all(...sqlQuery[1]).length) : updates[0].records
-    logger.trace(`${sqlQuery[0]} / completed`)
-    return res.json({"count": tot, trades: data, "last_updated": updates[0].lastUpdate})
+    const newestRecord = db.prepare('SELECT * FROM records ORDER BY last_updated DESC LIMIT 1;').get();
+    const tot = Object.keys(req.query).filter(key => validParameters.includes(key)).length > 0 ? await getOrSetToCache(`/${sqlQuery[0]}${sqlQuery[1]}${sqlQuery[2]}/tot`, () => db.prepare(sqlQuery[2]).all(...sqlQuery[1]).length) : newestRecord.records
+    logger.info(`API TRADES - ${sqlQuery[0]} / completed`)
+    return res.json({"count": tot, trades: data, "last_updated": newestRecord.last_updated})
   } catch (err) {
     logger.error({
       params: req.query
@@ -150,8 +159,14 @@ app.get('/api/trades', limiter, async (req, res) => {
 })
 
 app.get('/health', async (req, res) => {
-  logger.trace("We live")
+  logger.info("We live")
   res.status(200).send();
+});
+
+app.get ('/docs', function (req, res) {
+  const include = readFileSync (`${__dirname}/views/docs.md`, 'utf8');
+  const html = marked (include);
+  res.render ('docs', {"md": html});
 });
 
 app.listen(port, () => {
