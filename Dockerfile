@@ -12,6 +12,8 @@ COPY --from=deps /app/node_modules ./node_modules
 
 COPY . .
 
+RUN apk --no-cache add curl
+
 RUN npx tailwindcss -i ./public/input.css -o ./public/output.css
 
 EXPOSE 3333
