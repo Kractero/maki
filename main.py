@@ -6,6 +6,7 @@ import sqlite3
 import datetime
 import redis
 import os
+from dotenv import load_dotenv
 
 # def mapCardName():
 #     # con = sqlite3.connect("updated_trades.db")
@@ -124,6 +125,7 @@ def getLatestTradesRecursivelyWithoutUpdate():
     con.close()
     cards_con.close()
 
+    load_dotenv()
     redis_client = redis.StrictRedis(host=os.environ.get('REDIS_HOST', 'localhost'), port=int(os.environ.get('REDIS_PORT', 6379)), db=0)
 
     redis_client.flushall()
