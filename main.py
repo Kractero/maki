@@ -111,27 +111,33 @@ def getLatestTradesRecursivelyWithoutUpdate():
 
     getLatestThousandTrades()
 
-    con.commit()
-
     current_timestamp = int(datetime.datetime.now().timestamp())
     num_rows = cur.execute("SELECT COUNT(*) FROM trades").fetchone()[0]
 
-    with open('updates.json', 'r') as json_file:
-        json_data = json.load(json_file)
+    new_record = (num_rows, current_timestamp)
 
-    new_record = {
-        "lastUpdate": current_timestamp,
-        "records": num_rows
-    }
+    cur.execute("INSERT INTO records VALUES (?, ?)", new_record)
 
-    json_data.insert(0, new_record)
-
-    with open('updates.json', 'w') as json_file:
-        json.dump(json_data, json_file)
+    con.commit()
 
     con.close()
     cards_con.close()
 
+def data_table():
+    con = sqlite3.connect("trades.db")
+
+    cur = con.cursor()
+
+    create_table_sql = '''
+    CREATE TABLE IF NOT EXISTS records (
+        records INTEGER,
+        last_updated INTEGER
+    )
+    '''
+
+    cur.execute(create_table_sql)
+    con.commit()
+    con.close()
 
 # def build_from_9003():
 #     con = sqlite3.connect("trades.db")
@@ -211,6 +217,7 @@ def getLatestTradesRecursivelyWithoutUpdate():
 #     con3.execute("detach database dba")
 
 # build_from_9003()
+# data_table()
 getLatestTradesRecursivelyWithoutUpdate()
 # combine()
 # mapCardName()
