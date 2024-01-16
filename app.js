@@ -85,7 +85,7 @@ app.get('/tradestotal', async (req, res) => {
     const page = queryParameters.page ? parseInt(queryParameters.page) + 1 : 1;
     const sqlQuery = parse(queryParameters, 50, page)
     const newestRecord = db.prepare('SELECT * FROM records ORDER BY last_updated DESC LIMIT 1;').get();
-    const tot = Object.keys(req.query).filter(key => validParameters.includes(key)) > 0 ? await getOrSetToCache(`/tradestotal?${sqlQuery[1]}`, () => db.prepare(sqlQuery[2]).all(...sqlQuery[1]).length) : newestRecord.records
+    const tot = Object.keys(req.query).filter(key => validParameters.includes(key)).length > 0 ? await getOrSetToCache(`/tradestotal?${sqlQuery[1]}`, () => db.prepare(sqlQuery[2]).all(...sqlQuery[1]).length) : newestRecord.records
     logger.info(`TRADES TOTAL - /tradestotal ${tot} completed`)
     res.send({count: tot, update: minutes(newestRecord.last_updated)} )
   } catch (err) {
