@@ -64,7 +64,9 @@ app.get('/', async (req, res) => {
         delete queryParameters['category'];
     }
     const newestRecord = db.prepare('SELECT * FROM records ORDER BY last_updated DESC LIMIT 1;').get();
+    sqlQuery[2] = sqlQuery[2].replace('*', "COUNT(*) AS total_count")
     const tot = Object.keys(req.query).filter(key => validParameters.includes(key)).length > 0 ? await getOrSetToCache(`/tradestotal?${sqlQuery[1]}`.toLowerCase(), () => db.prepare(sqlQuery[2]).all(...sqlQuery[1]).length) : newestRecord.records
+    if (Array.isArray(tot)) tot = tot[0] ? tot[0].total_count : 0
     const querystring = buildQS(req.query)
     const nextPageUrl = `/trades?page=2&${querystring}`;
     logger.info(`BASE ROUTE - ${querystring} / completed`)
@@ -86,7 +88,7 @@ app.get('/tradestotal', async (req, res) => {
     const sqlQuery = parse(queryParameters, 50, page, "count")
     const newestRecord = db.prepare('SELECT * FROM records ORDER BY last_updated DESC LIMIT 1;').get();
     let tot = Object.keys(req.query).filter(key => validParameters.includes(key)).length > 0 ? await getOrSetToCache(`/tradestotal?${sqlQuery[1]}`.toLowerCase(), () => db.prepare(sqlQuery[2]).all(...sqlQuery[1])) : newestRecord.records
-    if (tot) tot = tot[0] ? tot[0].total_count : 0
+    if (Array.isArray(tot)) tot = tot[0] ? tot[0].total_count : 0
     logger.info(`TRADES TOTAL - /tradestotal ${tot} completed`)
     res.send({count: tot, update: minutes(newestRecord.last_updated)} )
   } catch (err) {
