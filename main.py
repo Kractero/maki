@@ -71,7 +71,7 @@ def getLatestTradesRecursivelyWithoutUpdate():
 
         trades = root.findall('.//TRADE')
 
-        if not trades:
+        if not trades or len(trades) == 1:
             return
 
         next_recursive_timestamp = trades[-1].find('TIMESTAMP').text
