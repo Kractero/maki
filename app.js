@@ -59,12 +59,12 @@ app.get('/', async (req, res) => {
   try {
     const queryParameters = req.query;
     const sqlQuery = parse(req.query, 50, 1)
-    const data = await getOrSetToCache(`/${sqlQuery[0]}${sqlQuery[1]}${sqlQuery[2]}`, () => convertTime(db.prepare(sqlQuery[0]).all(...sqlQuery[1])))
+    const data = await getOrSetToCache(`/trades?${sqlQuery[0]}${sqlQuery[1]}${sqlQuery[2]}`.toLowerCase(), () => convertTime(db.prepare(sqlQuery[0]).all(...sqlQuery[1])))
     if (req.query.hasOwnProperty('category') && req.query['category'].toLowerCase() === 'all') {
         delete queryParameters['category'];
     }
     const newestRecord = db.prepare('SELECT * FROM records ORDER BY last_updated DESC LIMIT 1;').get();
-    const tot = Object.keys(req.query).filter(key => validParameters.includes(key)).length > 0 ? await getOrSetToCache(`/${sqlQuery[0]}${sqlQuery[1]}${sqlQuery[2]}/tot`, () => db.prepare(sqlQuery[2]).all(...sqlQuery[1]).length) : newestRecord.records
+    const tot = Object.keys(req.query).filter(key => validParameters.includes(key)).length > 0 ? await getOrSetToCache(`/tradestotal?${sqlQuery[1]}`.toLowerCase(), () => db.prepare(sqlQuery[2]).all(...sqlQuery[1]).length) : newestRecord.records
     const querystring = buildQS(req.query)
     const nextPageUrl = `/trades?page=2&${querystring}`;
     logger.info(`BASE ROUTE - ${querystring} / completed`)
@@ -85,7 +85,7 @@ app.get('/tradestotal', async (req, res) => {
     const page = queryParameters.page ? parseInt(queryParameters.page) + 1 : 1;
     const sqlQuery = parse(queryParameters, 50, page)
     const newestRecord = db.prepare('SELECT * FROM records ORDER BY last_updated DESC LIMIT 1;').get();
-    const tot = Object.keys(req.query).filter(key => validParameters.includes(key)).length > 0 ? await getOrSetToCache(`/tradestotal?${sqlQuery[1]}`, () => db.prepare(sqlQuery[2]).all(...sqlQuery[1]).length) : newestRecord.records
+    const tot = Object.keys(req.query).filter(key => validParameters.includes(key)).length > 0 ? await getOrSetToCache(`/tradestotal?${sqlQuery[1]}`.toLowerCase(), () => db.prepare(sqlQuery[2]).all(...sqlQuery[1]).length) : newestRecord.records
     logger.info(`TRADES TOTAL - /tradestotal ${tot} completed`)
     res.send({count: tot, update: minutes(newestRecord.last_updated)} )
   } catch (err) {
@@ -99,7 +99,7 @@ app.get('/trades', async (req, res) => {
   try {
     const page = req.query.page ? parseInt(req.query.page) + 1 : 1;
     const sqlQuery = parse(req.query, 50, page)
-    const data = await getOrSetToCache(`/trades?${sqlQuery[0]}${sqlQuery[1]}${sqlQuery[2]}`, () => convertTime(db.prepare(sqlQuery[0]).all(...sqlQuery[1])))
+    const data = await getOrSetToCache(`/trades?${sqlQuery[0]}${sqlQuery[1]}${sqlQuery[2]}`.toLowerCase(), () => convertTime(db.prepare(sqlQuery[0]).all(...sqlQuery[1])))
     const querystring = buildQS(req.query)
     logger.info(`TRADES PAGINATED - ${querystring} / completed`)
     if (data.length === 0) {
