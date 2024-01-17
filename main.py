@@ -74,9 +74,9 @@ def getLatestTradesRecursivelyWithoutUpdate():
         if not trades:
             return
 
-        timestamp = 0
+        next_recursive_timestamp = trades[-1].find('TIMESTAMP').text
         data = []
-        for trade_elem in trades:
+        for trade_elem in trades[:-1]:
             buyer = trade_elem.find('BUYER').text
             card_id = trade_elem.find('CARDID').text
             category = trade_elem.find('CATEGORY').text
@@ -109,7 +109,7 @@ def getLatestTradesRecursivelyWithoutUpdate():
 
         cur.executemany("INSERT INTO trades VALUES (?, ?, ?, ?, ?, ?, ?, ?)", data)
 
-        getLatestThousandTrades(timestamp)
+        getLatestThousandTrades(next_recursive_timestamp)
 
     getLatestThousandTrades()
 
