@@ -61,7 +61,7 @@ def getLatestTradesRecursivelyWithoutUpdate():
     def getLatestThousandTrades(timestamp=datetime.datetime.now().timestamp()):
         sleep(0.7)
         url = f"https://www.nationstates.net/cgi-bin/api.cgi?q=cards+trades;limit=1000;beforetime={timestamp};sincetime={sincetime}"
-        headers = {"User-Agent": "Kractero"}
+        headers = {"User-Agent": "Kractero using Bazaar by Kractero"}
 
         request = urllib.request.Request(url, headers=headers)
         response = urllib.request.urlopen(request)
