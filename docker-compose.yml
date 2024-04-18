@@ -22,7 +22,7 @@ services:
           "-s",
           "-o",
           "/dev/null",
-          "https://bazaar.sideroca.com/health",
+          "https://bazaar.kractero.com/health",
         ]
       interval: 60s
       timeout: 10s

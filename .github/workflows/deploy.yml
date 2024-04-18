@@ -21,7 +21,7 @@ jobs:
           cd docker/bazaar
           git pull origin main
           git status
-          docker-compose stop bazaar
-          docker-compose rm -f web
+          docker compose stop bazaar
+          docker compose rm -f web
           docker rmi bazaar_bazaar:latest
-          docker-compose up -d --build
+          docker compose up -d --build
