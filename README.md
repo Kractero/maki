@@ -1,5 +1,7 @@
 # Bazaar
 
+**Updates are on pause while NationStates is down**
+
 Bazaar is a backend and frontend wrapper to a database containing all trade records since the start of the nationStates trading card minigame in 2018.
 
 The purpose of Bazaar is to provide a comprehensive platform for managing and retrieving trade records.
