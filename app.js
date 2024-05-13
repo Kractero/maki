@@ -175,36 +175,6 @@ app.get('/docs', function (req, res) {
   res.render('docs', { "md": html });
 });
 
-app.get('/download/db', (req, res) => {
-  const filePath = join(__dirname, 'May 11 to April 11.db');
-  if (req.aborted) {
-    logger.info("User aborted download request for db")
-    return;
-  }
-
-  res.download(filePath, (err) => {
-    logger.info("Database downloaded")
-    if (err) {
-      logger.error(err, `An error occured while downloading the database`)
-      res.status(404).send('File not found');
-    }
-  });
-});
-
-app.get('/download/json', (req, res) => {
-  const filePath = join(__dirname, 'trades.json');
-  if (req.aborted) {
-    logger.info("User aborted download request for json")
-    return;
-  }
-  res.download(filePath, (err) => {
-    if (err) {
-      logger.error(err, `An error occured while downloading the json`)
-      res.status(404).send('File not found');
-    }
-  });
-});
-
 function readRecordsFromJson(nation) {
   const jsonData = JSON.parse(readFileSync("trades.json", "utf-8"));
   if (jsonData.hasOwnProperty(nation)) {
