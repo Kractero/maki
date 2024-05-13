@@ -6,7 +6,7 @@ The purpose of Bazaar is to provide a comprehensive platform for managing and re
 
 ## DB
 
-The data was generated from a dump that 9003 generated off of data up to October 15th. I wrote some python scripts to push the data into a database, then some scripts to pull the latest data not included in the database. At the moment it updates every `5` minutes.
+The data was inspired from a dump that 9003 generated off of data up to October 15th. I wrote some python scripts to push the data into a database, then some scripts to pull the latest data not included in the database. At the moment it updates every `5` minutes.
 
 ## API
 
