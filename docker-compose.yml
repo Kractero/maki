@@ -23,7 +23,7 @@ services:
           "/dev/null",
           "https://bazaar.kractero.com/health",
         ]
-      interval: 60s
+      interval: 600s
       timeout: 10s
       retries: 3
     networks:
