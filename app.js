@@ -15,7 +15,7 @@ import { logger } from "./util/logger.js";
 import "dotenv/config.js";
 import { minutes } from "./util/timeSinceUpdate.js";
 import { marked } from "marked";
-import { readFileSync } from "fs";
+import { readFileSync, statSync } from "fs";
 
 const port = process.env.PORT || 3000;
 
@@ -175,32 +175,57 @@ app.get('/docs', function (req, res) {
   res.render('docs', { "md": html });
 });
 
-function readRecordsFromJson(nation) {
-  const jsonData = JSON.parse(readFileSync("trades.json", "utf-8"));
-  if (jsonData.hasOwnProperty(nation)) {
-    const data = jsonData[nation];
-    return data
-  }
-}
+// function readRecordsFromJson(nation) {
+//   const jsonData = JSON.parse(readFileSync("trades.json", "utf-8"));
+//   if (jsonData.hasOwnProperty(nation)) {
+//     const data = jsonData[nation];
+//     return data
+//   }
+// }
 
-app.get("/records/:nation", async (req, res) => {
-  let { nation } = req.params;
-  nation = nation.toLowerCase().replaceAll(' ', '_')
-  try {
-    const data = await getOrSetToCache(`/records:${nation}`, () => readRecordsFromJson(nation))
-    if (data) {
-      logger.info(`Records request for ${nation} served`)
-      res.json(data);
-    } else {
-      logger.error({
-        params: req.params
-      }, `An error occured on the /records/:nation route: ${nation} not found`)
-      res.status(404).json({ error: "Nation not found" });
-    }
-  } catch (err) {
-    logger.error({ params: req.params }, `An error occurred on the /records/:nation route: ${err}`);
-    res.status(500).json({ error: "Internal Server Error" });
+// app.get("/records/:nation", async (req, res) => {
+//   let { nation } = req.params;
+//   nation = nation.toLowerCase().replaceAll(' ', '_')
+//   try {
+//     const data = await getOrSetToCache(`/records:${nation}`, () => readRecordsFromJson(nation))
+//     if (data) {
+//       logger.info(`Records request for ${nation} served`)
+//       res.json(data);
+//     } else {
+//       logger.error({
+//         params: req.params
+//       }, `An error occured on the /records/:nation route: ${nation} not found`)
+//       res.status(404).json({ error: "Nation not found" });
+//     }
+//   } catch (err) {
+//     logger.error({ params: req.params }, `An error occurred on the /records/:nation route: ${err}`);
+//     res.status(500).json({ error: "Internal Server Error" });
+//   }
+// });
+
+const downloadLimiter = rateLimit({
+  windowMs: 24 * 60 * 60 * 1000,
+  max: 1,
+  message: { error: 'Daily download limit exceeded', status: 429 },
+});
+
+app.get('/download/db', downloadLimiter, (req, res) => {
+  const filePath = join(__dirname, 'trades.db');
+  if (req.aborted) {
+    logger.info("User aborted download request for db")
+    return;
   }
+
+  const stats = statSync(filePath);
+
+  res.download(filePath, (err) => {
+    if (err) {
+      logger.error(err, `An error occurred while downloading the database`);
+      res.status(404).send('File not found');
+    } else {
+      logger.info(`DATABASE DOWNLOADED !!!!!! Size: ${stats.size} bytes`);
+    }
+  });
 });
 
 app.listen(port, () => {
