@@ -2,26 +2,25 @@ name: Deploy
 
 on:
   push:
-    branches: [main]
+    branches: [master]
+  pull_request:
+    branches: [master]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Deploy project
-      uses: appleboy/ssh-action@master
-      with:
-        host: ${{ secrets.HOST }}
-        username: ${{ secrets.USERNAME }}
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
-        passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
-        port: ${{ secrets.PORT }}
-        script: |
-          cd docker/bazaar
-          git pull origin main
-          git status
-          docker compose stop bazaar
-          docker compose rm -f web
-          docker rmi bazaar_bazaar:latest
-          docker compose up -d --build
+      - name: Deploy project
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
+          port: ${{ secrets.PORT }}
+          script: |
+            cd docker/maki
+            git pull origin master
+            git status
+            docker compose up -d --build

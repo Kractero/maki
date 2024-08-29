@@ -5,29 +5,13 @@ services:
     container_name: bazaar
     volumes:
       - ./trades.db:/app/trades.db
-      - ./updates.json:/app/updates.json
       - ./app.log:/app/app.log
-      - ./cardids.db:/app/cardids.db
     environment:
       REDIS_HOST: ${REDIS_HOST}
       REDIS_PORT: ${REDIS_PORT}
     restart: always
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "curl",
-          "--fail",
-          "-s",
-          "-o",
-          "/dev/null",
-          "https://bazaar.kractero.com/health",
-        ]
-      interval: 600s
-      timeout: 10s
-      retries: 3
     networks:
-      - reverse-proxy
+      - caddy
   bazaarcache:
     restart: always
     image: redis:alpine
@@ -35,9 +19,9 @@ services:
     volumes:
       - bazaarcache:/data
     networks:
-      - reverse-proxy
+      - caddy
 volumes:
   bazaarcache: null
 networks:
-  reverse-proxy:
+  caddy:
     external: true
