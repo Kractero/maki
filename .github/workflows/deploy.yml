@@ -21,6 +21,6 @@ jobs:
           port: ${{ secrets.PORT }}
           script: |
             cd docker/maki
-            git pull origin master
+            git pull origin main
             git status
             docker compose up -d --build
