@@ -69,7 +69,7 @@ app.get('/api/tradestotal', async (req, res) => {
         type: 'api',
         route: 'tradestotal',
         page: page,
-        query: query,
+        query: req.query,
       },
       'Trades Total Hit'
     )
@@ -97,7 +97,7 @@ app.get('/api/trades-paginated', async (req, res) => {
         type: 'api',
         route: 'trades-paginated',
         page: page,
-        query: query,
+        query: req.query,
       },
       'Trades-paginated hit'
     )
