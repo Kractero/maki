@@ -5,7 +5,6 @@ import { parse } from './util/parse.js'
 import { fileURLToPath } from 'url'
 import { dirname } from 'path'
 import { convertTime } from './util/convertTime.js'
-import { buildQS } from './util/buildQS.js'
 import { rateLimit } from 'express-rate-limit'
 import compression from 'compression'
 import helmet from 'helmet'
@@ -19,11 +18,9 @@ import { statSync } from 'fs'
 const port = process.env.PORT || 3000
 
 const db = new Database('trades.db')
-// db.pragma('journal_mode = WAL');
 db.pragma('journal_mode = DELETE')
 
 const app = express()
-app.set('view engine', 'ejs')
 
 const limiter = rateLimit({
   windowMs: 30 * 1000,
@@ -35,15 +32,7 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
 app.use(compression())
-app.use(
-  helmet.contentSecurityPolicy({
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", 'https://unpkg.com', 'https://nakiri.vercel.app', "'unsafe-inline'"],
-      connectSrc: ["'self'", 'https://nakiri.vercel.app'],
-    },
-  })
-)
+app.use(helmet())
 app.use(cors())
 app.use(express.static(join(__dirname + '/public')))
 const validParameters = [
@@ -75,14 +64,23 @@ app.get('/api/tradestotal', async (req, res) => {
           )
         : newestRecord.records
     if (Array.isArray(tot)) tot = tot[0] ? tot[0].total_count : 0
-    logger.info(`TRADES TOTAL - /tradestotal ${tot} completed`)
+    logger.info(
+      {
+        type: 'api',
+        route: 'tradestotal',
+        page: page,
+        query: query,
+      },
+      'Trades Total Hit'
+    )
     res.send({ count: tot, update: minutes(newestRecord.last_updated) })
   } catch (err) {
     logger.error(
       {
-        params: req.query,
+        params: query,
+        err: err,
       },
-      `An error occured on the /tradestotal route: ${err}`
+      `An error occured on the /tradestotal route`
     )
   }
 })
@@ -94,15 +92,34 @@ app.get('/api/trades-paginated', async (req, res) => {
     const data = await getOrSetToCache(`/trades?${sqlQuery[0]}${sqlQuery[1]}${sqlQuery[2]}`.toLowerCase(), () =>
       convertTime(db.prepare(sqlQuery[0]).all(...sqlQuery[1]))
     )
-    const querystring = buildQS(req.query)
-    logger.info(`TRADES PAGINATED - ${querystring} / completed`)
+    logger.info(
+      {
+        type: 'api',
+        route: 'trades-paginated',
+        page: page,
+        query: query,
+      },
+      'Trades-paginated hit'
+    )
     res.send(data)
   } catch (err) {
-    console.err
+    logger.error(
+      {
+        params: query,
+        error: err,
+      },
+      `An error occured on the /trades-paginated route`
+    )
   }
 })
 
-app.get('/api/trades', limiter, async (req, res) => {
+const tradesLimiter = rateLimit({
+  windowMs: 30 * 1000,
+  max: 30,
+  message: { error: 'Rate limit exceeded', status: 429 },
+})
+
+app.get('/api/trades', tradesLimiter, async (req, res) => {
   try {
     const sqlQuery = parse(req.query, 1000)
     const data = await getOrSetToCache(`/api/trades?${sqlQuery[0]}${sqlQuery[1]}${sqlQuery[2]}`, () =>
@@ -116,50 +133,29 @@ app.get('/api/trades', limiter, async (req, res) => {
             () => db.prepare(sqlQuery[2]).all(...sqlQuery[1]).length
           )
         : newestRecord.records
-    logger.info(`API TRADES - ${sqlQuery[0]} / completed`)
+    logger.info(
+      {
+        type: 'api',
+        route: 'trades',
+        query: sqlQuery[0],
+      },
+      'Trades hit'
+    )
     return res.json({ count: tot, trades: data, last_updated: newestRecord.last_updated })
   } catch (err) {
     logger.error(
       {
-        params: req.query,
+        params: query,
+        error: err,
       },
-      `An error occured on the /api/trades route: ${err}`
+      `An error occured on the /trades route`
     )
   }
 })
 
 app.get('/api/health', async (req, res) => {
-  logger.info('We live')
   res.status(200).send()
 })
-
-// function readRecordsFromJson(nation) {
-//   const jsonData = JSON.parse(readFileSync("trades.json", "utf-8"));
-//   if (jsonData.hasOwnProperty(nation)) {
-//     const data = jsonData[nation];
-//     return data
-//   }
-// }
-
-// app.get("/records/:nation", async (req, res) => {
-//   let { nation } = req.params;
-//   nation = nation.toLowerCase().replaceAll(' ', '_')
-//   try {
-//     const data = await getOrSetToCache(`/records:${nation}`, () => readRecordsFromJson(nation))
-//     if (data) {
-//       logger.info(`Records request for ${nation} served`)
-//       res.json(data);
-//     } else {
-//       logger.error({
-//         params: req.params
-//       }, `An error occured on the /records/:nation route: ${nation} not found`)
-//       res.status(404).json({ error: "Nation not found" });
-//     }
-//   } catch (err) {
-//     logger.error({ params: req.params }, `An error occurred on the /records/:nation route: ${err}`);
-//     res.status(500).json({ error: "Internal Server Error" });
-//   }
-// });
 
 const downloadLimiter = rateLimit({
   windowMs: 24 * 60 * 60 * 1000,
@@ -167,9 +163,9 @@ const downloadLimiter = rateLimit({
   message: { error: 'Daily download limit exceeded', status: 429 },
 })
 
-app.get('/api/download/db', downloadLimiter, (req, res) => {
+app.get('/api/download/db', downloadLimiter, (req, res, message) => {
   const filePath = join(__dirname, 'trades.db')
-  if (req.aborted) {
+  if (message.destroyed) {
     logger.info('User aborted download request for db')
     return
   }
@@ -178,10 +174,20 @@ app.get('/api/download/db', downloadLimiter, (req, res) => {
 
   res.download(filePath, err => {
     if (err) {
-      logger.error(err, `An error occurred while downloading the database`)
+      logger.error(
+        {
+          error: err,
+        },
+        `An error occured while downloading the database`
+      )
       res.status(404).send('File not found')
     } else {
-      logger.info(`DATABASE DOWNLOADED !!!!!! Size: ${stats.size} bytes`)
+      logger.info(
+        {
+          size: stats.size,
+        },
+        'Database downloaded'
+      )
     }
   })
 })

@@ -1,20 +1,20 @@
-import pino from "pino";
+import pino from 'pino'
 
 export const logger = pino({
-  level: process.env.PINO_LOG_LEVEL || "trace",
+  level: process.env.PINO_LOG_LEVEL || 'trace',
   bindings: () => {
     return {
       node_version: process.version,
-    };
+    }
   },
   transport: {
     targets: [
-      { target: "pino/file", options: { destination: "app.log" } },
+      { level: 'info', target: 'pino/file', options: { destination: 'app.log' } },
+      { level: 'error', target: 'pino/file', options: { destination: 'error.log' } },
       {
-        target: "pino/file",
+        target: 'pino/file',
         options: { destination: 1 },
       },
     ],
   },
-  timestamp: pino.stdTimeFunctions.isoTime,
-});
+})

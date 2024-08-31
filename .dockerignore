@@ -2,3 +2,4 @@
 .gitignore
 trades.db
 app.log
+error.log

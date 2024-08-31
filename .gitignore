@@ -6,6 +6,8 @@ node_modules
 .env
 output.css
 app.log
+error.log
 data/*.jsonl
 updates.json
 venv
+dump.rdb

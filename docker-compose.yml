@@ -6,6 +6,7 @@ services:
     volumes:
       - ./trades.db:/app/trades.db
       - ./app.log:/app/app.log
+      - ./error.log:/app/error.log
     environment:
       REDIS_HOST: ${REDIS_HOST}
       REDIS_PORT: ${REDIS_PORT}
