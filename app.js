@@ -48,8 +48,9 @@ const validParameters = [
   'sincetime',
 ]
 
-app.get('/api/tradestotal', async (req, res) => {
+app.get('/api/tradestotal', limiter, async (req, res) => {
   try {
+    const origin = req.headers['x-origin']
     const queryParameters = req.query
     if (queryParameters.hasOwnProperty('category') && queryParameters['category'].toLowerCase() === 'all') {
       delete queryParameters['category']
@@ -70,23 +71,28 @@ app.get('/api/tradestotal', async (req, res) => {
         route: 'tradestotal',
         page: page,
         query: req.query,
+        origin: origin === 'frontend' ? 'frontend' : 'api',
       },
       'Trades Total Hit'
     )
     res.send({ count: tot, update: minutes(newestRecord.last_updated) })
-  } catch (err) {
+  } catch (error) {
+    const origin = req.headers['x-origin']
     logger.error(
       {
-        params: query,
-        err: err,
+        type: 'api',
+        params: req.query,
+        error: error.message,
+        origin: origin === 'frontend' ? 'frontend' : 'api',
       },
       `An error occured on the /tradestotal route`
     )
   }
 })
 
-app.get('/api/trades-paginated', async (req, res) => {
+app.get('/api/trades-paginated', limiter, async (req, res) => {
   try {
+    const origin = req.headers['x-origin']
     const page = req.query.page ? parseInt(req.query.page) : 1
     const sqlQuery = parse(req.query, 50, page)
     const data = await getOrSetToCache(`/trades?${sqlQuery[0]}${sqlQuery[1]}${sqlQuery[2]}`.toLowerCase(), () =>
@@ -98,15 +104,19 @@ app.get('/api/trades-paginated', async (req, res) => {
         route: 'trades-paginated',
         page: page,
         query: req.query,
+        origin: origin === 'frontend' ? 'frontend' : 'api',
       },
       'Trades-paginated hit'
     )
     res.send(data)
-  } catch (err) {
+  } catch (error) {
+    const origin = req.headers['x-origin']
     logger.error(
       {
-        params: query,
-        error: err,
+        type: 'api',
+        params: req.query,
+        error: error.message,
+        origin: origin === 'frontend' ? 'frontend' : 'api',
       },
       `An error occured on the /trades-paginated route`
     )
@@ -138,15 +148,18 @@ app.get('/api/trades', tradesLimiter, async (req, res) => {
         type: 'api',
         route: 'trades',
         query: sqlQuery[0],
+        origin: 'api',
       },
       'Trades hit'
     )
     return res.json({ count: tot, trades: data, last_updated: newestRecord.last_updated })
-  } catch (err) {
+  } catch (error) {
     logger.error(
       {
-        params: query,
-        error: err,
+        type: 'api',
+        params: req.query,
+        error: error.message,
+        origin: 'api',
       },
       `An error occured on the /trades route`
     )
@@ -176,7 +189,9 @@ app.get('/api/download/db', downloadLimiter, (req, res, message) => {
     if (err) {
       logger.error(
         {
-          error: err,
+          type: 'api',
+          params: req.query,
+          origin: 'api',
         },
         `An error occured while downloading the database`
       )
@@ -184,7 +199,9 @@ app.get('/api/download/db', downloadLimiter, (req, res, message) => {
     } else {
       logger.info(
         {
+          type: 'api',
           size: stats.size,
+          origin: 'api',
         },
         'Database downloaded'
       )

@@ -1,8 +1,8 @@
-# Bazaar
+# Maki
 
-Bazaar is a backend and frontend wrapper to a database containing all trade records since the start of the nationStates trading card minigame in 2018.
+![Express.js](https://img.shields.io/badge/express.js-%23404d59.svg?style=for-the-badge&logo=express&logoColor=%2361DAFB) ![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
 
-The purpose of Bazaar is to provide a comprehensive platform for managing and retrieving trade records.
+Maki is a backend API to interface with a database containing all trade records since the start of the nationStates trading card minigame in 2018.
 
 ## DB
 
@@ -19,6 +19,7 @@ The API is built with Express and wraps the SQLite database containing trade rec
 - **Description:** Retrieve a list of trade records based on specified parameters.
 
   - **Parameters:**
+
     - `buyer`: Filter by buyer name.
     - `seller`: Filter by seller name.
     - `cardid`: Filter by card ID.
@@ -31,12 +32,9 @@ The API is built with Express and wraps the SQLite database containing trade rec
     - `sincetime`: Filter trades since the specified timestamp.
 
   - **Optional Parameters:**
+
     - `limit`: Limit the number of returned results (defaults to 1000).
     - `sortval`: Sort results by `price` or `timestamp`, `timestamp` default.
     - `sortorder`: Sorting order `asc` or `desc`, `desc` default.
 
   - **Rate Limit:** 50 requests per 30 seconds.
-
-## Frontend
-
-The frontend is served as a page by Express using the EJS templating engine. It leverages htmx for dynamic content updates.
