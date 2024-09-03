@@ -87,6 +87,8 @@ app.get('/api/tradestotal', limiter, async (req, res) => {
       },
       `An error occured on the /tradestotal route`
     )
+
+    return res.status(500).json({ error: error.message })
   }
 })
 
@@ -120,6 +122,8 @@ app.get('/api/trades-paginated', limiter, async (req, res) => {
       },
       `An error occured on the /trades-paginated route`
     )
+
+    return res.status(500).json({ error: error.message })
   }
 })
 
@@ -163,6 +167,73 @@ app.get('/api/trades', tradesLimiter, async (req, res) => {
       },
       `An error occured on the /trades route`
     )
+
+    return res.status(500).json({ error: error.message })
+  }
+})
+
+const dailyLimiter = rateLimit({
+  windowMs: 24 * 60 * 60 * 1000,
+  max: 2,
+  message: { error: 'Daily limit exceeded', status: 429 },
+})
+
+app.get('/api/daily', dailyLimiter, async (req, res) => {
+  try {
+    const day = req.query.day
+
+    if (!day || !/^\d{4}-\d{2}-\d{2}$/.test(day)) {
+      return res.status(400).json({ error: 'Invalid date format. Expected YYYY-MM-DD.' })
+    }
+
+    const query = db
+      .prepare(
+        `
+        SELECT
+            DATE(DATETIME(timestamp, 'unixepoch')) AS trade_day,
+            season,
+            category,
+            COUNT(*) AS total_trades,
+            SUM(price) AS total_price,
+            COUNT(DISTINCT buyer) AS total_buyers,
+            COUNT(DISTINCT seller) AS total_sellers,
+            SUM(CASE WHEN price = 0 THEN 1 ELSE 0 END) AS total_gifts
+        FROM
+            trades
+        WHERE
+            DATE(DATETIME(timestamp, 'unixepoch')) = ?
+        GROUP BY
+            trade_day,
+            season,
+            category
+      `
+      )
+      .all(day)
+
+    logger.info(
+      {
+        type: 'api',
+        route: 'trades-daily',
+        query: day,
+        origin: 'api',
+      },
+      'Trades hit'
+    )
+
+    const count = query.length
+    return res.json({ trades: query, count: count })
+  } catch (error) {
+    logger.error(
+      {
+        type: 'api',
+        params: req.query,
+        error: error.message,
+        origin: 'api',
+      },
+      'An error occurred on the /daily route'
+    )
+
+    return res.status(500).json({ error: error.message })
   }
 })
 
@@ -170,13 +241,7 @@ app.get('/api/health', async (req, res) => {
   res.status(200).send()
 })
 
-const downloadLimiter = rateLimit({
-  windowMs: 24 * 60 * 60 * 1000,
-  max: 1,
-  message: { error: 'Daily download limit exceeded', status: 429 },
-})
-
-app.get('/api/download/db', downloadLimiter, (req, res, message) => {
+app.get('/api/download/db', dailyLimiter, (req, res, message) => {
   const filePath = join(__dirname, 'trades.db')
   if (message.destroyed) {
     logger.info('User aborted download request for db')
