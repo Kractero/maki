@@ -21,6 +21,7 @@ const db = new Database('trades.db')
 db.pragma('journal_mode = DELETE')
 
 const app = express()
+app.set('trust proxy', 1)
 
 const limiter = rateLimit({
   windowMs: 30 * 1000,
@@ -241,7 +242,13 @@ app.get('/api/health', async (req, res) => {
   res.status(200).send()
 })
 
-app.get('/api/download/db', dailyLimiter, (req, res, message) => {
+const downloadLimiter = rateLimit({
+  windowMs: 24 * 60 * 60 * 1000,
+  max: 1,
+  message: { error: 'Daily limit exceeded', status: 429 },
+})
+
+app.get('/api/download/db', downloadLimiter, (req, res, message) => {
   const filePath = join(__dirname, 'trades.db')
   if (message.destroyed) {
     logger.info('User aborted download request for db')
