@@ -1,4 +1,4 @@
-const apiParameters = ['page', 'sortval', 'limit', 'sortorder']
+const apiParameters = ['page', 'sortval', 'limit', 'sortorder', 'offset']
 const validParameters = [
   'buyer',
   'seller',
@@ -64,8 +64,9 @@ export function parse(params, limit, page, method) {
     params['sortorder'] ? params['sortorder'].toUpperCase() : 'DESC'
   }`
   limit = params.limit ? params.limit : parseInt(limit) ? limit : 1000
+  const offset = params.offset ? parseInt(params.offset) : page ? (page - 1) * queryLimit : 0
 
-  const limitSqlQuery = sqlQuery + ` LIMIT ${limit} ` + (page ? `OFFSET ${(page - 1) * limit}` : '')
+  const limitSqlQuery = `${sqlQuery} LIMIT ${limit} OFFSET ${offset}`
 
   return [limitSqlQuery, queryParams, sqlQuery]
 }
