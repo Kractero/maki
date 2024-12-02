@@ -64,7 +64,7 @@ export function parse(params, limit, page, method) {
     params['sortorder'] ? params['sortorder'].toUpperCase() : 'DESC'
   }`
   limit = params.limit ? params.limit : parseInt(limit) ? limit : 1000
-  const offset = params.offset ? parseInt(params.offset) : page ? (page - 1) * queryLimit : 0
+  const offset = params.offset ? parseInt(params.offset) : page ? (page - 1) * limit : 0
 
   const limitSqlQuery = `${sqlQuery} LIMIT ${limit} OFFSET ${offset}`
 
