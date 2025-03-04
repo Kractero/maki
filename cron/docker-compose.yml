@@ -1,0 +1,10 @@
+services:
+  bazaarcron:
+    build:
+      context: .
+    container_name: bazaarcron
+    volumes:
+      - ./cardids.db:/app/cardids.db
+      - ./app.log:/app/app.log
+      - ./main.py:/app/main.py
+    restart: always

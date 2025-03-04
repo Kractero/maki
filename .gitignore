@@ -9,5 +9,6 @@ app.log
 error.log
 data/*.jsonl
 updates.json
-venv
+.venv
 dump.rdb
+*.nix

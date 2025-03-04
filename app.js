@@ -302,8 +302,8 @@ app.post('/api/insert', async (req, res) => {
   const trades = req.body.trades
 
   const insertQuery = db.prepare(`
-    INSERT INTO trades (buyer, seller, card_id, category, price, season, timestamp)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO trades (buyer, seller, card_id, category, price, season, timestamp, card_name)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `)
   try {
     db.transaction(() => {
@@ -315,16 +315,22 @@ app.post('/api/insert', async (req, res) => {
           trade.category,
           trade.price,
           trade.season,
-          trade.timestamp
+          trade.timestamp,
+          trade.card_name
         )
       })
     })()
+
+    const current_timestamp = Math.round(Date.now() / 1000)
+    const num_rows = db.prepare('SELECT COUNT(*) AS count FROM trades').get().count
+    const new_record = [num_rows, current_timestamp]
+
+    db.prepare('INSERT INTO records (records, last_updated)  VALUES (?, ?)').run(new_record)
 
     await RedisClient.flushall()
 
     res.status(200).send('Trades inserted successfully')
   } catch (error) {
-    console.log(error)
     logger.error({ error, origin: 'api' }, 'Error inserting trades into database')
     res.status(500).send('Error inserting trades')
   }
