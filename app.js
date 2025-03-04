@@ -14,6 +14,7 @@ import { logger } from './util/logger.js'
 import 'dotenv/config.js'
 import { minutes } from './util/timeSinceUpdate.js'
 import { statSync } from 'fs'
+import { RedisClient } from './util/redis.js'
 
 const port = process.env.PORT || 3000
 
@@ -36,6 +37,8 @@ app.use(compression())
 app.use(helmet())
 app.use(cors())
 app.use(express.static(join(__dirname + '/public')))
+app.use(express.json())
+
 const validParameters = [
   'buyer',
   'seller',
@@ -279,6 +282,67 @@ app.get('/api/download/db', downloadLimiter, (req, res, message) => {
       )
     }
   })
+})
+
+const validApiKey = process.env.API_KEY
+
+function checkApiKey(req) {
+  const apiKey = req.headers['x-api-key']
+  if (!apiKey || apiKey !== validApiKey) {
+    return false
+  }
+  return true
+}
+
+app.post('/api/insert', async (req, res) => {
+  if (!checkApiKey(req)) {
+    return res.status(403).send('Forbidden: Invalid API Key')
+  }
+
+  const trades = req.body.trades
+
+  const insertQuery = db.prepare(`
+    INSERT INTO trades (buyer, seller, card_id, category, price, season, timestamp)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `)
+  try {
+    db.transaction(() => {
+      trades.forEach(trade => {
+        insertQuery.run(
+          trade.buyer,
+          trade.seller,
+          trade.card_id,
+          trade.category,
+          trade.price,
+          trade.season,
+          trade.timestamp
+        )
+      })
+    })()
+
+    await RedisClient.flushall()
+
+    res.status(200).send('Trades inserted successfully')
+  } catch (error) {
+    console.log(error)
+    logger.error({ error, origin: 'api' }, 'Error inserting trades into database')
+    res.status(500).send('Error inserting trades')
+  }
+})
+
+app.get('/api/latest-timestamp', (req, res) => {
+  if (!checkApiKey(req)) {
+    return res.status(403).send('Forbidden: Invalid API Key')
+  }
+
+  const newestRecord = db.prepare('SELECT TIMESTAMP FROM trades ORDER BY timestamp DESC LIMIT 1;').get()
+
+  if (!newestRecord || !newestRecord.timestamp) {
+    return res.json({ sincetime: 1522549492 })
+  }
+
+  const sincetime = newestRecord.timestamp + 1
+  return res.json({ sincetime })
 })
 
 app.listen(port, () => {
