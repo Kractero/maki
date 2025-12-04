@@ -421,7 +421,13 @@ app.post('/api/insert', async (req, res) => {
 
     db.prepare('INSERT INTO records (records, last_updated)  VALUES (?, ?)').run(new_record)
 
-    await RedisClient.flushall()
+    let cursor = 0
+    do {
+      const [newCursor, keys] = await RedisClient.scan(cursor, { MATCH: '*', COUNT: 100 })
+      cursor = Number(newCursor)
+      const keysToDelete = keys.filter(k => !k.startsWith('/api/trades-wrapped'))
+      if (keysToDelete.length) await RedisClient.unlink(keysToDelete)
+    } while (cursor !== 0)
 
     res.status(200).send('Trades inserted successfully')
   } catch (error) {
