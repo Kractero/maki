@@ -16,8 +16,7 @@ export async function getOrSetToCache(key, callback, expiry) {
   }
   const queryResult = await callback()
   if (queryResult) {
-    RedisClient.set(key, JSON.stringify(queryResult))
-    RedisClient.expire(key, expiry ? expiry : 600)
+    await RedisClient.set(key, JSON.stringify(queryResult), 'EX', expiry ? expiry : 600)
     logger.info(
       {
         type: 'redis',
