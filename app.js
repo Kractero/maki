@@ -64,8 +64,9 @@ app.get('/api/tradestotal', limiter, async (req, res) => {
     const newestRecord = db.prepare('SELECT * FROM records ORDER BY last_updated DESC LIMIT 1;').get()
     let tot =
       Object.keys(req.query).filter(key => validParameters.includes(key)).length > 0
-        ? await getOrSetToCache(`/tradestotal?${sqlQuery[1]}`.toLowerCase(), () =>
-            db.prepare(sqlQuery[2]).all(...sqlQuery[1])
+        ? await getOrSetToCache(
+            `/tradestotal?${sqlQuery[1]}`.toLowerCase(),
+            () => db.prepare(sqlQuery[2]).get(...sqlQuery[1]).total_count
           )
         : newestRecord.records
     if (Array.isArray(tot)) tot = tot[0] ? tot[0].total_count : 0
@@ -148,7 +149,7 @@ app.get('/api/trades', tradesLimiter, async (req, res) => {
       Object.keys(req.query).filter(key => validParameters.includes(key)).length > 0
         ? await getOrSetToCache(
             `/${sqlQuery[0]}${sqlQuery[1]}${sqlQuery[2]}/tot`,
-            () => db.prepare(sqlQuery[2]).all(...sqlQuery[1]).length
+            () => db.prepare(sqlQuery[2]).get(...sqlQuery[1]).count
           )
         : newestRecord.records
     logger.info(
