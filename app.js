@@ -235,12 +235,12 @@ app.get('/api/trades-wrapped', async (req, res) => {
 
         const mostTradedSeason = db
           .prepare(
-            `SELECT season, COUNT(*) as count FROM trades WHERE buyer COLLATE NOCASE = ? AND timestamp BETWEEN ? AND ? GROUP BY season ORDER BY CASE WHEN season = 4 THEN 1 ELSE 0 END, count DESC LIMIT 1`
+            `SELECT season, COUNT(*) as count FROM trades WHERE buyer COLLATE NOCASE = ? AND timestamp BETWEEN ? AND ? GROUP BY season ORDER BY count DESC LIMIT 1`
           )
           .get(nation, startTimestamp, endTimestamp) || { season: 4, count: 0 }
         const mostTradedSeasonSold = db
           .prepare(
-            `SELECT season, COUNT(*) as count FROM trades WHERE seller COLLATE NOCASE = ? AND timestamp BETWEEN ? AND ? GROUP BY season ORDER BY CASE WHEN season = 4 THEN 1 ELSE 0 END, count DESC LIMIT 1`
+            `SELECT season, COUNT(*) as count FROM trades WHERE seller COLLATE NOCASE = ? AND timestamp BETWEEN ? AND ? GROUP BY season ORDER BY count DESC LIMIT 1`
           )
           .get(nation, startTimestamp, endTimestamp) || { season: 4, count: 0 }
 
