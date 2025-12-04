@@ -1,7 +1,7 @@
 import { logger } from './logger.js'
 import { RedisClient } from './redis.js'
 
-export async function getOrSetToCache(key, callback) {
+export async function getOrSetToCache(key, callback, expiry) {
   const data = await RedisClient.get(key)
   if (data) {
     logger.info(
@@ -17,7 +17,7 @@ export async function getOrSetToCache(key, callback) {
   const queryResult = await callback()
   if (queryResult) {
     RedisClient.set(key, JSON.stringify(queryResult))
-    RedisClient.expire(key, 600)
+    RedisClient.expire(key, expiry ? expiry : 600)
     logger.info(
       {
         type: 'redis',

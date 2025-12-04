@@ -176,6 +176,99 @@ app.get('/api/trades', tradesLimiter, async (req, res) => {
   }
 })
 
+app.get('/api/trades-wrapped', async (req, res) => {
+  let { nation } = req.query
+  nation = nation.toLowerCase().replaceAll(' ', '_')
+
+  try {
+    const cacheKey = `/api/trades-wrapped?nation=${nation}`
+
+    const yearly = await getOrSetToCache(
+      cacheKey,
+      async () => {
+        const startTimestamp = 1735689600
+        const endTimestamp = 1767225599
+
+        const { buyTot } = db
+          .prepare(`SELECT COUNT(*) as buyTot FROM trades WHERE buyer COLLATE NOCASE = ? AND timestamp BETWEEN ? AND ?`)
+          .get(String(nation), startTimestamp, endTimestamp)
+        const { sellTot } = db
+          .prepare(
+            `SELECT COUNT(*) as sellTot FROM trades WHERE seller COLLATE NOCASE = ? AND timestamp BETWEEN ? AND ?`
+          )
+          .get(String(nation), startTimestamp, endTimestamp)
+        if (buyTot === 0 && sellTot === 0) return { buyTot: 0, sellTot: 0 }
+
+        const earliestBuy = db
+          .prepare(
+            `SELECT * FROM trades WHERE buyer COLLATE NOCASE = ? AND timestamp BETWEEN ? AND ? ORDER BY timestamp ASC LIMIT 1`
+          )
+          .get(nation, startTimestamp, endTimestamp)
+        const earliestSell = db
+          .prepare(
+            `SELECT * FROM trades WHERE seller COLLATE NOCASE = ? AND timestamp BETWEEN ? AND ? ORDER BY timestamp ASC LIMIT 1`
+          )
+          .get(nation, startTimestamp, endTimestamp)
+
+        const mostExpensiveBuy = db
+          .prepare(
+            `SELECT * FROM trades WHERE buyer COLLATE NOCASE = ? AND timestamp BETWEEN ? AND ? ORDER BY price DESC LIMIT 1`
+          )
+          .get(nation, startTimestamp, endTimestamp)
+        const mostExpensiveSale = db
+          .prepare(
+            `SELECT * FROM trades WHERE seller COLLATE NOCASE = ? AND timestamp BETWEEN ? AND ? ORDER BY price DESC LIMIT 1`
+          )
+          .get(nation, startTimestamp, endTimestamp)
+
+        const mostTradedCategory = db
+          .prepare(
+            `SELECT category, COUNT(*) as count FROM trades WHERE buyer COLLATE NOCASE = ? AND timestamp BETWEEN ? AND ? GROUP BY category ORDER BY count DESC LIMIT 1`
+          )
+          .get(nation, startTimestamp, endTimestamp) || { rarity: '', count: 0 }
+        const mostTradedCategorySold = db
+          .prepare(
+            `SELECT category, COUNT(*) as count FROM trades WHERE seller COLLATE NOCASE = ? AND timestamp BETWEEN ? AND ? GROUP BY category ORDER BY count DESC LIMIT 1`
+          )
+          .get(nation, startTimestamp, endTimestamp) || { rarity: '', count: 0 }
+
+        const mostTradedSeason = db
+          .prepare(
+            `SELECT season, COUNT(*) as count FROM trades WHERE buyer COLLATE NOCASE = ? AND timestamp BETWEEN ? AND ? GROUP BY season ORDER BY count DESC LIMIT 1`
+          )
+          .get(nation, startTimestamp, endTimestamp) || { season: 4, count: 0 }
+        const mostTradedSeasonSold = db
+          .prepare(
+            `SELECT season, COUNT(*) as count FROM trades WHERE seller COLLATE NOCASE = ? AND timestamp BETWEEN ? AND ? GROUP BY season ORDER BY count DESC LIMIT 1`
+          )
+          .get(nation, startTimestamp, endTimestamp) || { season: 4, count: 0 }
+
+        return {
+          buyTot,
+          sellTot,
+          earliestBuy,
+          earliestSell,
+          mostExpensiveBuy,
+          mostExpensiveSale,
+          mostTradedCategory: { rarity: mostTradedCategory.category || '', count: mostTradedCategory.count },
+          mostTradedSeason,
+          mostTradedCategorySold: {
+            rarity: mostTradedCategorySold.category || '',
+            count: mostTradedCategorySold.count,
+          },
+          mostTradedSeasonSold,
+        }
+      },
+      3600
+    )
+
+    res.json(yearly)
+  } catch (err) {
+    console.error('Error in /trades-wrapped:', err)
+    res.status(500).json({ error: err.message })
+  }
+})
+
 const dailyLimiter = rateLimit({
   windowMs: 24 * 60 * 60 * 1000,
   max: 2,

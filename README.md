@@ -28,8 +28,8 @@ The API is built with Express and wraps the SQLite database containing trade rec
     - `maxprice`: Filter trades with price less than or equal to the specified value.
     - `price`: Filter trades with a specific price.
     - `season`: Filter trades by season.
-    - `beforetime`: Filter trades before the specified timestamp.
-    - `sincetime`: Filter trades since the specified timestamp.
+    - `beforetime`: Filter trades before the specified timestamp (in milliseconds).
+    - `sincetime`: Filter trades since the specified timestamp (in milliseconds).
 
   - **Optional Parameters:**
 
