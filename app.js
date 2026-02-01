@@ -56,8 +56,12 @@ app.get('/api/tradestotal', limiter, async (req, res) => {
   try {
     const origin = req.headers['x-origin']
     const queryParameters = req.query
-    if (queryParameters.hasOwnProperty('category') && queryParameters['category'].toLowerCase() === 'all') {
-      delete queryParameters['category']
+    if (
+      queryParameters?.category &&
+      typeof queryParameters.category === 'string' &&
+      queryParameters.category.toLowerCase() === 'all'
+    ) {
+      delete queryParameters.category
     }
     const page = queryParameters.page ? parseInt(queryParameters.page) + 1 : 1
     const sqlQuery = parse(queryParameters, 50, page, 'count')
