@@ -450,12 +450,7 @@ app.post('/api/insert', async (req, res) => {
 
     stmts.insertRecord.run(new_record)
 
-    /*
-      Whatever its too late to fix this stop flushing for now
-      its not that big of a deal
-      nobody uses bazaar anyways and they expire after 5 minutes
-    */
-    //await RedisClient.flushall()
+    await RedisClient.flushall()
 
     res.status(200).send('Trades inserted successfully')
   } catch (error) {
