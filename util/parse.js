@@ -60,9 +60,11 @@ export function parse(params, limit, page, method) {
   if (sqlConditions.length > 0) {
     sqlQuery += ` WHERE ${sqlConditions.join(' AND ')}`
   }
-  sqlQuery += ` ORDER BY ${params['sortval'] ? params['sortval'].toUpperCase() : 'TIMESTAMP'} ${
-    params['sortorder'] ? params['sortorder'].toUpperCase() : 'DESC'
-  }`
+  const allowedSortColumns = ['TIMESTAMP', 'PRICE', 'SEASON', 'CATEGORY', 'CARD_ID', 'BUYER', 'SELLER']
+  const allowedSortOrders = ['ASC', 'DESC']
+  const sortVal = allowedSortColumns.includes(params['sortval']?.toUpperCase()) ? params['sortval'].toUpperCase() : 'TIMESTAMP'
+  const sortOrder = allowedSortOrders.includes(params['sortorder']?.toUpperCase()) ? params['sortorder'].toUpperCase() : 'DESC'
+  sqlQuery += ` ORDER BY ${sortVal} ${sortOrder}`
   limit = params.limit ? params.limit : parseInt(limit) ? limit : 1000
   const offset = params.offset ? parseInt(params.offset) : page ? (page - 1) * limit : 0
 
