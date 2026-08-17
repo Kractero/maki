@@ -19,7 +19,29 @@ import { RedisClient } from './util/redis.js'
 const port = process.env.PORT || 3000
 
 const db = new Database('trades.db')
-db.pragma('journal_mode = DELETE')
+db.pragma('journal_mode = WAL')
+db.pragma('synchronous = NORMAL')
+
+db.exec(`
+  CREATE INDEX IF NOT EXISTS idx_trades_buyer ON trades (buyer COLLATE NOCASE, timestamp);
+  CREATE INDEX IF NOT EXISTS idx_trades_seller ON trades (seller COLLATE NOCASE, timestamp);
+  CREATE INDEX IF NOT EXISTS idx_trades_timestamp ON trades (timestamp);
+  CREATE INDEX IF NOT EXISTS idx_trades_card_id ON trades (card_id);
+  CREATE INDEX IF NOT EXISTS idx_trades_category ON trades (category COLLATE NOCASE);
+  CREATE INDEX IF NOT EXISTS idx_trades_season ON trades (season);
+  CREATE INDEX IF NOT EXISTS idx_trades_price ON trades (price);
+`)
+
+const stmts = {
+  newestRecord: db.prepare('SELECT * FROM records ORDER BY last_updated DESC LIMIT 1'),
+  latestTimestamp: db.prepare('SELECT timestamp FROM trades ORDER BY timestamp DESC LIMIT 1'),
+  totalRows: db.prepare('SELECT COUNT(*) AS count FROM trades'),
+  insertTrade: db.prepare(`
+    INSERT INTO trades (buyer, seller, card_id, category, price, season, timestamp, card_name)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `),
+  insertRecord: db.prepare('INSERT INTO records (records, last_updated) VALUES (?, ?)'),
+}
 
 const app = express()
 app.set('trust proxy', 1)
@@ -34,7 +56,12 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
 app.use(compression())
-app.use(helmet())
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    crossOriginOpenerPolicy: { policy: 'unsafe-none' },
+  })
+)
 app.use(cors())
 app.use(express.static(join(__dirname + '/public')))
 app.use(express.json())
@@ -65,7 +92,7 @@ app.get('/api/tradestotal', limiter, async (req, res) => {
     }
     const page = queryParameters.page ? parseInt(queryParameters.page) + 1 : 1
     const sqlQuery = parse(queryParameters, 50, page, 'count')
-    const newestRecord = db.prepare('SELECT * FROM records ORDER BY last_updated DESC LIMIT 1;').get()
+    const newestRecord = stmts.newestRecord.get()
     let tot =
       Object.keys(req.query).filter(key => validParameters.includes(key)).length > 0
         ? await getOrSetToCache(
@@ -148,7 +175,7 @@ app.get('/api/trades', tradesLimiter, async (req, res) => {
     const data = await getOrSetToCache(`/api/trades?${sqlQuery[0]}${sqlQuery[1]}${sqlQuery[2]}`, () =>
       db.prepare(sqlQuery[0]).all(...sqlQuery[1])
     )
-    const newestRecord = db.prepare('SELECT * FROM records ORDER BY last_updated DESC LIMIT 1;').get()
+    const newestRecord = stmts.newestRecord.get()
     const tot =
       Object.keys(req.query).filter(key => validParameters.includes(key)).length > 0
         ? await getOrSetToCache(
@@ -288,11 +315,14 @@ app.get('/api/daily', dailyLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Invalid date format. Expected YYYY-MM-DD.' })
     }
 
+    const startOfDay = Math.floor(new Date(`${day}T00:00:00Z`).getTime() / 1000)
+    const endOfDay = startOfDay + 86400
+
     const query = db
       .prepare(
         `
         SELECT
-            DATE(DATETIME(timestamp, 'unixepoch')) AS trade_day,
+            ? AS trade_day,
             season,
             category,
             COUNT(*) AS total_trades,
@@ -303,14 +333,13 @@ app.get('/api/daily', dailyLimiter, async (req, res) => {
         FROM
             trades
         WHERE
-            DATE(DATETIME(timestamp, 'unixepoch')) = ?
+            timestamp >= ? AND timestamp < ?
         GROUP BY
-            trade_day,
             season,
             category
       `
       )
-      .all(day)
+      .all(day, startOfDay, endOfDay)
 
     logger.info(
       {
@@ -399,14 +428,10 @@ app.post('/api/insert', async (req, res) => {
 
   const trades = req.body.trades
 
-  const insertQuery = db.prepare(`
-    INSERT INTO trades (buyer, seller, card_id, category, price, season, timestamp, card_name)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `)
   try {
     db.transaction(() => {
       trades.forEach(trade => {
-        insertQuery.run(
+        stmts.insertTrade.run(
           trade.buyer,
           trade.seller,
           trade.card_id,
@@ -420,10 +445,10 @@ app.post('/api/insert', async (req, res) => {
     })()
 
     const current_timestamp = Math.round(Date.now() / 1000)
-    const num_rows = db.prepare('SELECT COUNT(*) AS count FROM trades').get().count
+    const num_rows = stmts.totalRows.get().count
     const new_record = [num_rows, current_timestamp]
 
-    db.prepare('INSERT INTO records (records, last_updated)  VALUES (?, ?)').run(new_record)
+    stmts.insertRecord.run(new_record)
 
     /*
       Whatever its too late to fix this stop flushing for now
@@ -444,7 +469,7 @@ app.get('/api/latest-timestamp', (req, res) => {
     return res.status(403).send('Forbidden: Invalid API Key')
   }
 
-  const newestRecord = db.prepare('SELECT TIMESTAMP FROM trades ORDER BY timestamp DESC LIMIT 1;').get()
+  const newestRecord = stmts.latestTimestamp.get()
 
   if (!newestRecord || !newestRecord.timestamp) {
     return res.json({ sincetime: 1522549492 })
