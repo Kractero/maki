@@ -7,22 +7,9 @@ services:
       - ./trades.db:/app/trades.db
       - ./app.log:/app/app.log
       - ./error.log:/app/error.log
-    environment:
-      REDIS_HOST: ${REDIS_HOST}
-      REDIS_PORT: ${REDIS_PORT}
     restart: always
     networks:
       - caddy
-  bazaarcache:
-    restart: always
-    image: redis:alpine
-    container_name: bazaarcache
-    volumes:
-      - bazaarcache:/data
-    networks:
-      - caddy
-volumes:
-  bazaarcache: null
 networks:
   caddy:
     external: true

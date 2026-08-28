@@ -9,12 +9,10 @@ import { rateLimit } from 'express-rate-limit'
 import compression from 'compression'
 import helmet from 'helmet'
 import cors from 'cors'
-import { getOrSetToCache } from './util/getOrSetToCache.js'
 import { logger } from './util/logger.js'
 import 'dotenv/config.js'
 import { minutes } from './util/timeSinceUpdate.js'
 import { statSync } from 'fs'
-import { RedisClient } from './util/redis.js'
 
 const port = process.env.PORT || 3000
 
@@ -95,10 +93,7 @@ app.get('/api/tradestotal', limiter, async (req, res) => {
     const newestRecord = stmts.newestRecord.get()
     let tot =
       Object.keys(req.query).filter(key => validParameters.includes(key)).length > 0
-        ? await getOrSetToCache(
-            `/tradestotal?${sqlQuery[1]}`.toLowerCase(),
-            () => db.prepare(sqlQuery[2]).get(...sqlQuery[1]).total_count
-          )
+        ? db.prepare(sqlQuery[2]).get(...sqlQuery[1]).total_count
         : newestRecord.records
     if (Array.isArray(tot)) tot = tot[0] ? tot[0].total_count : 0
     logger.info(
@@ -133,9 +128,7 @@ app.get('/api/trades-paginated', limiter, async (req, res) => {
     const origin = req.headers['x-origin']
     const page = req.query.page ? parseInt(req.query.page) : 1
     const sqlQuery = parse(req.query, 50, page)
-    const data = await getOrSetToCache(`/trades?${sqlQuery[0]}${sqlQuery[1]}${sqlQuery[2]}`.toLowerCase(), () =>
-      convertTime(db.prepare(sqlQuery[0]).all(...sqlQuery[1]))
-    )
+    const data = convertTime(db.prepare(sqlQuery[0]).all(...sqlQuery[1]))
     logger.info(
       {
         type: 'api',
@@ -172,16 +165,11 @@ const tradesLimiter = rateLimit({
 app.get('/api/trades', tradesLimiter, async (req, res) => {
   try {
     const sqlQuery = parse(req.query, 1000)
-    const data = await getOrSetToCache(`/api/trades?${sqlQuery[0]}${sqlQuery[1]}${sqlQuery[2]}`, () =>
-      db.prepare(sqlQuery[0]).all(...sqlQuery[1])
-    )
+    const data = db.prepare(sqlQuery[0]).all(...sqlQuery[1])
     const newestRecord = stmts.newestRecord.get()
     const tot =
       Object.keys(req.query).filter(key => validParameters.includes(key)).length > 0
-        ? await getOrSetToCache(
-            `/${sqlQuery[0]}${sqlQuery[1]}${sqlQuery[2]}/tot`,
-            () => db.prepare(sqlQuery[2]).get(...sqlQuery[1]).count
-          )
+        ? db.prepare(sqlQuery[2]).get(...sqlQuery[1]).count
         : newestRecord.records
     logger.info(
       {
@@ -208,93 +196,87 @@ app.get('/api/trades', tradesLimiter, async (req, res) => {
   }
 })
 
-app.get('/api/trades-wrapped', async (req, res) => {
+const wrappedLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  message: { error: 'Rate limit exceeded', status: 429 },
+})
+
+app.get('/api/trades-wrapped', wrappedLimiter, async (req, res) => {
   let { nation } = req.query
   nation = nation.toLowerCase().replaceAll(' ', '_')
 
   try {
-    const cacheKey = `/api/trades-wrapped?nation=${nation}`
+    const startTimestamp = 1735689600
+    const endTimestamp = 1767225599
 
-    const yearly = await getOrSetToCache(
-      cacheKey,
-      async () => {
-        const startTimestamp = 1735689600
-        const endTimestamp = 1767225599
+    const { buyTot } = db
+      .prepare(`SELECT COUNT(*) as buyTot FROM trades WHERE buyer COLLATE NOCASE = ? AND timestamp BETWEEN ? AND ?`)
+      .get(String(nation), startTimestamp, endTimestamp)
+    const { sellTot } = db
+      .prepare(`SELECT COUNT(*) as sellTot FROM trades WHERE seller COLLATE NOCASE = ? AND timestamp BETWEEN ? AND ?`)
+      .get(String(nation), startTimestamp, endTimestamp)
+    if (buyTot === 0 && sellTot === 0) return { buyTot: 0, sellTot: 0 }
 
-        const { buyTot } = db
-          .prepare(`SELECT COUNT(*) as buyTot FROM trades WHERE buyer COLLATE NOCASE = ? AND timestamp BETWEEN ? AND ?`)
-          .get(String(nation), startTimestamp, endTimestamp)
-        const { sellTot } = db
-          .prepare(
-            `SELECT COUNT(*) as sellTot FROM trades WHERE seller COLLATE NOCASE = ? AND timestamp BETWEEN ? AND ?`
-          )
-          .get(String(nation), startTimestamp, endTimestamp)
-        if (buyTot === 0 && sellTot === 0) return { buyTot: 0, sellTot: 0 }
+    const earliestBuy = db
+      .prepare(
+        `SELECT * FROM trades WHERE buyer COLLATE NOCASE = ? AND timestamp BETWEEN ? AND ? ORDER BY timestamp ASC LIMIT 1`
+      )
+      .get(nation, startTimestamp, endTimestamp)
+    const earliestSell = db
+      .prepare(
+        `SELECT * FROM trades WHERE seller COLLATE NOCASE = ? AND timestamp BETWEEN ? AND ? ORDER BY timestamp ASC LIMIT 1`
+      )
+      .get(nation, startTimestamp, endTimestamp)
 
-        const earliestBuy = db
-          .prepare(
-            `SELECT * FROM trades WHERE buyer COLLATE NOCASE = ? AND timestamp BETWEEN ? AND ? ORDER BY timestamp ASC LIMIT 1`
-          )
-          .get(nation, startTimestamp, endTimestamp)
-        const earliestSell = db
-          .prepare(
-            `SELECT * FROM trades WHERE seller COLLATE NOCASE = ? AND timestamp BETWEEN ? AND ? ORDER BY timestamp ASC LIMIT 1`
-          )
-          .get(nation, startTimestamp, endTimestamp)
+    const mostExpensiveBuy = db
+      .prepare(
+        `SELECT * FROM trades WHERE buyer COLLATE NOCASE = ? AND timestamp BETWEEN ? AND ? ORDER BY price DESC LIMIT 1`
+      )
+      .get(nation, startTimestamp, endTimestamp)
+    const mostExpensiveSale = db
+      .prepare(
+        `SELECT * FROM trades WHERE seller COLLATE NOCASE = ? AND timestamp BETWEEN ? AND ? ORDER BY price DESC LIMIT 1`
+      )
+      .get(nation, startTimestamp, endTimestamp)
 
-        const mostExpensiveBuy = db
-          .prepare(
-            `SELECT * FROM trades WHERE buyer COLLATE NOCASE = ? AND timestamp BETWEEN ? AND ? ORDER BY price DESC LIMIT 1`
-          )
-          .get(nation, startTimestamp, endTimestamp)
-        const mostExpensiveSale = db
-          .prepare(
-            `SELECT * FROM trades WHERE seller COLLATE NOCASE = ? AND timestamp BETWEEN ? AND ? ORDER BY price DESC LIMIT 1`
-          )
-          .get(nation, startTimestamp, endTimestamp)
+    const mostTradedCategory = db
+      .prepare(
+        `SELECT category, COUNT(*) as count FROM trades WHERE buyer COLLATE NOCASE = ? AND timestamp BETWEEN ? AND ? GROUP BY category ORDER BY count DESC LIMIT 1`
+      )
+      .get(nation, startTimestamp, endTimestamp) || { rarity: '', count: 0 }
+    const mostTradedCategorySold = db
+      .prepare(
+        `SELECT category, COUNT(*) as count FROM trades WHERE seller COLLATE NOCASE = ? AND timestamp BETWEEN ? AND ? GROUP BY category ORDER BY count DESC LIMIT 1`
+      )
+      .get(nation, startTimestamp, endTimestamp) || { rarity: '', count: 0 }
 
-        const mostTradedCategory = db
-          .prepare(
-            `SELECT category, COUNT(*) as count FROM trades WHERE buyer COLLATE NOCASE = ? AND timestamp BETWEEN ? AND ? GROUP BY category ORDER BY count DESC LIMIT 1`
-          )
-          .get(nation, startTimestamp, endTimestamp) || { rarity: '', count: 0 }
-        const mostTradedCategorySold = db
-          .prepare(
-            `SELECT category, COUNT(*) as count FROM trades WHERE seller COLLATE NOCASE = ? AND timestamp BETWEEN ? AND ? GROUP BY category ORDER BY count DESC LIMIT 1`
-          )
-          .get(nation, startTimestamp, endTimestamp) || { rarity: '', count: 0 }
+    const mostTradedSeason = db
+      .prepare(
+        `SELECT season, COUNT(*) as count FROM trades WHERE buyer COLLATE NOCASE = ? AND timestamp BETWEEN ? AND ? GROUP BY season ORDER BY count DESC LIMIT 1`
+      )
+      .get(nation, startTimestamp, endTimestamp) || { season: 4, count: 0 }
+    const mostTradedSeasonSold = db
+      .prepare(
+        `SELECT season, COUNT(*) as count FROM trades WHERE seller COLLATE NOCASE = ? AND timestamp BETWEEN ? AND ? GROUP BY season ORDER BY count DESC LIMIT 1`
+      )
+      .get(nation, startTimestamp, endTimestamp) || { season: 4, count: 0 }
 
-        const mostTradedSeason = db
-          .prepare(
-            `SELECT season, COUNT(*) as count FROM trades WHERE buyer COLLATE NOCASE = ? AND timestamp BETWEEN ? AND ? GROUP BY season ORDER BY count DESC LIMIT 1`
-          )
-          .get(nation, startTimestamp, endTimestamp) || { season: 4, count: 0 }
-        const mostTradedSeasonSold = db
-          .prepare(
-            `SELECT season, COUNT(*) as count FROM trades WHERE seller COLLATE NOCASE = ? AND timestamp BETWEEN ? AND ? GROUP BY season ORDER BY count DESC LIMIT 1`
-          )
-          .get(nation, startTimestamp, endTimestamp) || { season: 4, count: 0 }
-
-        return {
-          buyTot,
-          sellTot,
-          earliestBuy,
-          earliestSell,
-          mostExpensiveBuy,
-          mostExpensiveSale,
-          mostTradedCategory: { rarity: mostTradedCategory.category || '', count: mostTradedCategory.count },
-          mostTradedSeason,
-          mostTradedCategorySold: {
-            rarity: mostTradedCategorySold.category || '',
-            count: mostTradedCategorySold.count,
-          },
-          mostTradedSeasonSold,
-        }
+    res.json({
+      buyTot,
+      sellTot,
+      earliestBuy,
+      earliestSell,
+      mostExpensiveBuy,
+      mostExpensiveSale,
+      mostTradedCategory: { rarity: mostTradedCategory.category || '', count: mostTradedCategory.count },
+      mostTradedSeason,
+      mostTradedCategorySold: {
+        rarity: mostTradedCategorySold.category || '',
+        count: mostTradedCategorySold.count,
       },
-      3600
-    )
-
-    res.json(yearly)
+      mostTradedSeasonSold,
+    })
   } catch (err) {
     console.error('Error in /trades-wrapped:', err)
     res.status(500).json({ error: err.message })
@@ -449,8 +431,6 @@ app.post('/api/insert', async (req, res) => {
     const new_record = [num_rows, current_timestamp]
 
     stmts.insertRecord.run(new_record)
-
-    await RedisClient.flushall()
 
     res.status(200).send('Trades inserted successfully')
   } catch (error) {
