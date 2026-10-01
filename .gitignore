@@ -1,6 +1,6 @@
 __pycache__
 Full Dump.txt
-*.db
+*.db*
 pre-combine
 node_modules
 .env
@@ -13,4 +13,3 @@ updates.json
 dump.rdb
 *.nix
 venv
-.db*
