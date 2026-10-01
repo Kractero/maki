@@ -79,7 +79,6 @@ def getLatestTradesIteratively():
             logging.info("No more trades found.")
             break
 
-        timestamp = trades[-1].find('TIMESTAMP').text
         data = []
         for trade_elem in trades:
             buyer = trade_elem.find('BUYER').text
@@ -116,7 +115,6 @@ def getLatestTradesIteratively():
             'Accept': 'application/json',
             'Content-Type': 'application/json'
         }
-
         for i in range(0, len(data), 500):
             chunk = data[i:i + 500]
             batch_num += 1
@@ -134,6 +132,9 @@ def getLatestTradesIteratively():
                     json={"content": f"Bazaar failed to insert trades - {resp.status_code} - {resp.reason}!"},
                     headers={"Accept": "application/json", "Content-Type": "application/json"}
                 )
+                sys.exit("Exiting script due to failed trade insertion.")
+
+        timestamp = trades[-1].find('TIMESTAMP').text
 
         if ratelimit_remaining and int(ratelimit_remaining) > 0:
             wait_time = int(ratelimit_reset) / int(ratelimit_remaining)
