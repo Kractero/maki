@@ -13,3 +13,4 @@ updates.json
 dump.rdb
 *.nix
 venv
+.db*
