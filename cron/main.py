@@ -54,9 +54,18 @@ def getLatestTradesIteratively():
         ratelimit_reset = response.headers.get('RateLimit-Reset')
         retry_after = response.headers.get('Retry-After')
 
+        if response.status_code not in (200, 429):
+            logging.error(f"NS returned {response.status_code}")
+            requests.post(
+                webhook, 
+                json={"content": f"Bazaar NS fetch failed - {response.status_code}"},
+                headers={"Accept": "application/json", "Content-Type": "application/json"}
+            )
+            sys.exit("Exiting script due to NationStates response error.")
+        
         if response.status_code == 429:
             if retry_after:
-                wait_time = int(retry_after)
+                wait_time = int(retry_after) if retry_after else int(ratelimit_reset or 30)
             else:
                 wait_time = int(ratelimit_reset) / int(ratelimit_remaining) if ratelimit_remaining else int(ratelimit_reset)
             logging.info(f"Rate limit exceeded. Sleeping for {wait_time} seconds.")
