@@ -424,13 +424,13 @@ app.post('/api/insert', async (req, res) => {
           trade.card_name
         )
       })
+
+      const current_timestamp = Math.round(Date.now() / 1000)
+      const num_rows = stmts.totalRows.get().count
+      const new_record = [num_rows, current_timestamp]
+  
+      stmts.insertRecord.run(new_record)
     })()
-
-    const current_timestamp = Math.round(Date.now() / 1000)
-    const num_rows = stmts.totalRows.get().count
-    const new_record = [num_rows, current_timestamp]
-
-    stmts.insertRecord.run(new_record)
 
     res.status(200).send('Trades inserted successfully')
   } catch (error) {
