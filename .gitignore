@@ -12,3 +12,4 @@ updates.json
 .venv
 dump.rdb
 *.nix
+venv
