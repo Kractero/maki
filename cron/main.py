@@ -115,8 +115,8 @@ def getLatestTradesIteratively():
             'Accept': 'application/json',
             'Content-Type': 'application/json'
         }
-        for i in range(0, len(data), 500):
-            chunk = data[i:i + 500]
+        for i in range(0, len(data), 1000):
+            chunk = data[i:i + 1000]
             batch_num += 1
             resp = requests.post(
                 "https://maki.kractero.com/api/insert",
